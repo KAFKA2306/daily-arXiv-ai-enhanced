@@ -1,7 +1,7 @@
 arxiv:
-  categories:  # 文章类型
+  categories:  # 論文カテゴリ
     - cs.CV
     - cs.CL
 
 llm:
-  model_name: 'gemini-2.5-pro-preview'  # 使用的LLM模型
+  model_name: 'gemini-2.5-pro-preview'  # 使用するLLMモデル
