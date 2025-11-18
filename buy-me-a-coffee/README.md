@@ -1,5 +1,5 @@
-如果您觉得这个项目有帮助你，可以考虑给dw-dengwei打赏
+このプロジェクトが役に立ったと感じたら、dw-dengweiへコーヒー代のサポートをご検討ください。
 
-注意：如果您希望打赏其它Fork仓库而不是[dw-dengwei/daily-arXiv-ai-enhanced](https://github.com/dw-dengwei/daily-arXiv-ai-enhanced/tree/main) 请不要扫码
+注意: [dw-dengwei/daily-arXiv-ai-enhanced](https://github.com/dw-dengwei/daily-arXiv-ai-enhanced/tree/main) ではなく、別フォークの作者を支援したい場合は下記QRコードを使用しないでください。
 
 ![code](./code.jpg)

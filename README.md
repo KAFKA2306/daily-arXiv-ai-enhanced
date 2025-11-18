@@ -1,67 +1,61 @@
 # 🚀 daily-arXiv-ai-enhanced
 
 > [!CAUTION]
-> 若您所在法域对学术数据有审查要求，谨慎运行本代码；任何二次分发版本必须履行合规审查（包括但不限于原始论文合规性、AI合规性）义务，否则一切法律后果由下游自行承担。
-
+> 学術データに検閲や配信制限が課されている地域では、本コードの実行やデプロイに細心の注意を払い、関連する法規・ポリシーを必ず確認してください。
+>
 > [!CAUTION]
-> If your jurisdiction has censorship requirements for academic data, run this code with caution; any secondary distribution version must remove the entrance accessible to China and fulfill the content review obligations, otherwise all legal consequences will be borne by the downstream.
+> このリポジトリを派生・再配布する場合は、中国本土からアクセス可能な入り口を削除し、原論文およびAI生成物の内容審査義務を履行してください。未対応のまま公開した場合に生じる法的責任は、派生者・利用者自身に帰属します。
 
+本ツールは、arXiv論文の自動クロールとAI要約を組み合わせ、最新研究をストレスなく追跡できるよう再設計したソリューションです。
 
-This innovative tool transforms how you stay updated with arXiv papers by combining automated crawling with AI-powered summarization.
+## ✨ 主な特徴
 
+🎯 **ゼロインフラ運用**
+- GitHub Actions と Pages だけで完結し、サーバー不要
+- 無料枠でそのまま運用可能
 
-## ✨ Key Features
+🤖 **AIによる要約**
+- DeepSeek を使った毎日の論文クロール & 要約
+- 1日あたり約0.2元（人民元）と低コスト
 
-🎯 **Zero Infrastructure Required**
-- Leverages GitHub Actions and Pages - no server needed
-- Completely free to deploy and use
+💫 **快適な閲覧体験**
+- 興味分野に応じた論文の自動ハイライト
+- PC/モバイル両対応のレスポンシブUI
+- ローカルストレージに嗜好を保存しプライバシーを確保
+- 日付レンジを柔軟にフィルタリング
 
-🤖 **Smart AI Summarization**
-- Daily paper crawling with DeepSeek-powered summaries
-- Cost-effective: Only ~0.2 CNY per day
-
-💫 **Smart Reading Experience**
-- Personalized paper highlighting based on your interests
-- Cross-device compatibility (desktop & mobile)
-- Local preference storage for privacy
-- Flexible date range filtering
-
-👉 **[Try it now!](https://dw-dengwei.github.io/daily-arXiv-ai-enhanced/)** - No installation required
-
-
+👉 **[今すぐ試す](https://dw-dengwei.github.io/daily-arXiv-ai-enhanced/)** — インストール不要で即利用できます。
 
 https://github.com/user-attachments/assets/b25712a4-fb8d-484f-863d-e8da6922f9d7
 
 
 
+# 使い方
+このリポジトリは **cs.CV, cs.GR, cs.CL, cs.AI** の論文を毎日収集し、**DeepSeek** で **中国語** に要約します。
+他カテゴリ・他言語・他LLMを使いたい場合は下記手順に従ってください。セットアップ無しで利用したい場合は https://dw-dengwei.github.io/daily-arXiv-ai-enhanced/ にアクセスしてください。気に入ったらスターをお願いします。
 
-# How to use
-This repo will daily crawl arXiv papers about **cs.CV, cs.GR, cs.CL and cs.AI**, and use **DeepSeek** to summarize the papers in **Chinese**.
-If you wish to crawl other arXiv categories, use other LLMs, or other languages, please follow the instructions.
-Otherwise, you can directly use this repo in https://dw-dengwei.github.io/daily-arXiv-ai-enhanced/. Please star it if you like :)
+**セットアップ手順**
+1. リポジトリをフォークし、[buy-me-a-coffee](./buy-me-a-coffee/README.md) から作者向けリンクを削除します。
+2. `自分のリポジトリ -> Settings -> Secrets and variables -> Actions` に移動します。
+3. **Secrets**（暗号化される機密情報）タブを開きます。
+4. `OPENAI_API_KEY` と `OPENAI_BASE_URL` の2つのリポジトリシークレットを作成し、対応する値を設定します。
+5. **任意**: `secrets.ACCESS_PASSWORD` にパスワードを設定すると、公開ページへのアクセスを制限できます（参考: https://github.com/dw-dengwei/daily-arXiv-ai-enhanced/pull/64）。
+6. **Variables**（平文で参照できる非機密設定）タブに移動します。
+7. 以下のリポジトリ変数を作成します。
+   1. `CATEGORIES`: 例 `"cs.CL, cs.CV"`
+   2. `LANGUAGE`: 例 `"Chinese"` `"English"`
+   3. `MODEL_NAME`: 例 `"deepseek-chat"`
+   4. `EMAIL`: GitHub への push で使うメール
+   5. `NAME`: GitHub への push で使う名前
+8. `自分のリポジトリ -> Actions -> arXiv-daily-ai-enhanced` を開きます。
+9. **Run workflow** を手動実行して動作を確認できます（処理時間は約1時間）。既定では毎日自動実行されます。スケジュールを変更したい場合は `.github/workflows/run.yml` を編集します。
+10. GitHub Pages を設定します。`Settings -> Pages` で `Build and deployment: Deploy from a branch`、`Branch: main / (root)` を選択し保存します。数分後に https://<username>.github.io/daily-arXiv-ai-enhanced/ を確認してください。詳細は [このIssue](https://github.com/dw-dengwei/daily-arXiv-ai-enhanced/issues/14) を参照してください。
 
-**Instructions:**
-1. Fork this repo to your own account and delete my own information in [by-me-a-coffee](./buy-me-a-coffee/README.md).
-2. Go to: your-own-repo -> Settings -> Secrets and variables -> Actions
-3. Go to Secrets. Secrets are encrypted and used for sensitive data
-4. Create two repository secrets named `OPENAI_API_KEY` and `OPENAI_BASE_URL`, and input corresponding values.
-5. [Optional] Set a password in `secrets.ACCESS_PASSWORD` if you do not wish others to access your page. (see https://github.com/dw-dengwei/daily-arXiv-ai-enhanced/pull/64)
-6. Go to Variables. Variables are shown as plain text and are used for non-sensitive data
-7. Create the following repository variables:
-   1. `CATEGORIES`: separate the categories with ",", such as "cs.CL, cs.CV"
-   2. `LANGUAGE`: such as "Chinese" or "English"
-   3. `MODEL_NAME`: such as "deepseek-chat"
-   4. `EMAIL`: your email for push to GitHub
-   5. `NAME`: your name for push to GitHub
-8. Go to your-own-repo -> Actions -> arXiv-daily-ai-enhanced
-9. You can manually click **Run workflow** to test if it works well (it may take about one hour). By default, this action will automatically run every day. You can modify it in `.github/workflows/run.yml`
-10. Set up GitHub pages: Go to your own repo -> Settings -> Pages. In `Build and deployment`, set `Source="Deploy from a branch"`, `Branch="main", "/(root)"`. Wait for a few minutes, go to https://\<username\>.github.io/daily-arXiv-ai-enhanced/. Please see this [issue](https://github.com/dw-dengwei/daily-arXiv-ai-enhanced/issues/14) for more precise instructions.
+# 計画
+https://github.com/users/dw-dengwei/projects/3 を参照してください。
 
-# Plans
-See https://github.com/users/dw-dengwei/projects/3
-
-# Contributors
-Thanks to the following special contributors for contributing code, discovering bugs, and sharing useful ideas for this project!!!
+# コントリビューター
+コード提供・不具合報告・アイデア共有をしてくださった皆さまに感謝します！
 <table>
   <tbody>
     <tr>
@@ -96,8 +90,8 @@ Thanks to the following special contributors for contributing code, discovering 
   </tbody>
 </table>
 
-# Acknowledgement
-We sincerely thank the following individuals and organizations for their promotion and support!!!
+# 謝辞
+応援・紹介してくださったコミュニティ／メディアに感謝します！
 <table>
   <tbody>
     <tr>
@@ -117,10 +111,9 @@ We sincerely thank the following individuals and organizations for their promoti
   </tbody>
 </table>
 
-
-# Star history
+# スター履歴
 
 [![Stargazers over time](https://starchart.cc/dw-dengwei/daily-arXiv-ai-enhanced.svg?variant=adaptive)](https://starchart.cc/dw-dengwei/daily-arXiv-ai-enhanced)
 
-# Buy me a coffee
-[here](./buy-me-a-coffee/README.md)
+# コーヒーの差し入れ
+[こちら](./buy-me-a-coffee/README.md)
