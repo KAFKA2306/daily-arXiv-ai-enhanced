@@ -108,7 +108,10 @@ jobs:
         export OPENAI_BASE_URL=${{ secrets.OPENAI_BASE_URL }}
         export LANGUAGE="${{ vars.LANGUAGE }}"
         export MODEL_NAME="${{ vars.MODEL_NAME }}"
-        
+        if [ -z "$OPENAI_BASE_URL" ] && [[ "$MODEL_NAME" == gemini-* ]]; then
+          export OPENAI_BASE_URL="https://generativelanguage.googleapis.com/v1beta/openai"
+        fi
+
         python enhance.py --data ../data/${today}.jsonl
         
         # 检查AI处理是否成功 / Check if AI processing was successful

@@ -44,7 +44,7 @@ https://github.com/user-attachments/assets/b25712a4-fb8d-484f-863d-e8da6922f9d7
 7. 以下のリポジトリ変数を作成します。
    1. `CATEGORIES`: 例 `"cs.CL, cs.CV"`
    2. `LANGUAGE`: 例 `"Chinese"` `"English"`
-   3. `MODEL_NAME`: 例 `"deepseek-chat"`
+   3. `MODEL_NAME`: 例 `"gemini-pro-2.5-preview"`（`gemini-` で始まり `OPENAI_BASE_URL` を空にすると自動で `https://generativelanguage.googleapis.com/v1beta/openai` を使い、Google AI Studio の無料 Gemini がそのまま動作します）
    4. `EMAIL`: GitHub への push で使うメール
    5. `NAME`: GitHub への push で使う名前
 8. `自分のリポジトリ -> Actions -> arXiv-daily-ai-enhanced` を開きます。
