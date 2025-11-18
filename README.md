@@ -19,7 +19,7 @@
 ## GitHub Actions 設定と実行フロー
 2. `Settings > Secrets and variables > Actions` で以下を設定します。
    - **Secrets**: `OPENAI_API_KEY`（必須）、`OPENAI_BASE_URL`（Gemini 以外を使う場合のみ）、`ACCESS_PASSWORD`（任意。未設定だとハッシュは `DISABLED_NO_PASSWORD_SET_IN_SECRETS` で固定）。
-   - **Variables**: `CATEGORIES`（例: `cs.CL, cs.CV`）、`LANGUAGE`（未指定時は自動で `Japanese`）、`MODEL_NAME`（未指定時は `gemini-2.5-pro-preview`）、`EMAIL` と `NAME`（CI が git commit/push する際に使用）。
+   - **Variables**: `CATEGORIES`（例: `cs.CL, cs.CV`）、`LANGUAGE`（未指定時は自動で `Japanese`）、`MODEL_NAME`（未指定時は `gemini-2.5-pro-preview`）、`MIN_INTERVAL_SECONDS`（LLM 呼び出しのグローバル最小間隔。既定は `60` 秒で 1 件/分を保証）、`EMAIL` と `NAME`（CI が git commit/push する際に使用）。
 3. `.github/workflows/run.yml` は以下の構成です（`permissions` で `contents/pages/id-token` を write に設定し、`concurrency` で `github-pages` グループを共有）。
    - **依存インストール**: `actions/checkout@v4` → `uv` をスクリプトで導入し `uv sync`。すべて `.venv` に展開します。
    - **Crawl ステップ**: `.venv` を有効化し、日付付き JSONL を再生成。`LANGUAGE` と `MODEL_NAME` は空ならデフォルトをセットし、`MODEL_NAME` が `gemini-*` なら `OPENAI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai` を自動補完します。
@@ -37,7 +37,7 @@
 - `source .venv/bin/activate && bash run.sh` : クローリング→重複検査→AI→Markdown→`assets/file-list.txt` 更新までを一括実行。`OPENAI_API_KEY`, `OPENAI_BASE_URL`, `LANGUAGE=Japanese`, `CATEGORIES`, `MODEL_NAME` を事前に export。
 - `scrapy crawl arxiv -o data/<日付>.jsonl` : spider の単体検証。
 - `python daily_arxiv/daily_arxiv/check_stats.py` : 重複検査（終了コード 0=続行/1=新規なし/2=エラー）。
-- `python ai/enhance.py --data data/<日付>.jsonl` : AI 要約のみ再実行。
+- `python ai/enhance.py --data data/<日付>.jsonl --min-interval-secs 60` : AI 要約のみ再実行。`--min-interval-secs` を増減させると LLM コールの全体レート（既定 60 秒＝1件/分）を調整できます。
 - `python to_md/convert.py --data data/<日付>_AI_enhanced_Japanese.jsonl` : Markdown のみ再生成。
 - `python3 update_readme.py` : README 再生成。
 - `bash setup-local-auth.sh` : `js/auth-config.js` にパスワードハッシュを注入。
@@ -55,6 +55,7 @@
 3. **Variables** に以下を登録または更新します。
    - `MODEL_NAME`: 例 `gemini-2.5-pro-preview`。Gemini 系を指定した場合はワークフローが自動で `OPENAI_BASE_URL` を補完します。
    - `LANGUAGE`: 要約出力言語。既定は `Japanese`（AI 出力ファイル名や Markdown ファイルの参照言語にも使われます）。
+   - `MIN_INTERVAL_SECONDS`: LLM 呼び出しのグローバル最小間隔（秒）。CI ではこの値が `--min-interval-secs` に渡され、並列ワーカーがあっても常に 1 コールごとに最低この時間だけ待機します。60 秒推奨。
    - `EMAIL` / `NAME`: CI がコミットする際の `user.email` / `user.name`。
 4. 変更後に `Actions > arXiv-daily-ai-enhanced > Run workflow` から手動実行し、ログで `Using model ...` `OPENAI_BASE_URL=...` が期待通りか確認します。
 
@@ -66,10 +67,16 @@
    LANGUAGE=Japanese
    CATEGORIES="cs.AI, cs.CL"
    MODEL_NAME=gemini-2.5-pro-preview
+   MIN_INTERVAL_SECONDS=60
    ACCESS_PASSWORD=任意のパスワード
    ```
 2. `source .venv/bin/activate && export $(cat .env | xargs)` のように読み込んでから `bash run.sh` を実行すると、CI と同じ設定で再現できます。
 3. パスワード付きでローカル UI を試す場合は `.env` を読み込んだ状態で `bash setup-local-auth.sh` を実行し、生成された `js/auth-config.js` をブラウザで参照します。
+
+#### LLM コール間隔の制御
+1. `ai/enhance.py` は `--min-interval-secs`（デフォルト 60 秒）で **グローバルな最小待機時間** を設けており、並列ワーカーが複数あっても LLM 呼び出しはこの間隔で直列化されます。
+2. GitHub Actions では `vars.MIN_INTERVAL_SECONDS` の値がそのまま `--min-interval-secs` に渡されます。1 分より速くしたい場合や、逆に余裕を持たせたい場合は Vars を変更してから次のワークフローを起動してください。
+3. ローカルで挙動を確認したい場合は `python ai/enhance.py --data ... --min-interval-secs 30` のように任意の秒数を指定すれば、その場でレートを切り替えられます。
 
 ### 2. クローリング対象・検索条件の更新手順
 1. GitHub の「Settings > Secrets and variables > Actions > Variables」で `CATEGORIES` を編集します。値は `cs.AI, cs.CL` のようにカンマ区切り・半角スペース付きで記述すると `daily_arxiv/daily_arxiv/spiders/arxiv.py` のパーサーと一致します。
