@@ -2,7 +2,7 @@ name: arXiv毎日AI拡張
 
 on:
   schedule:
-    - cron: "30 1 * * *"
+    - cron: "0 21 * * *"
   workflow_dispatch:
     inputs:
       date:
@@ -34,11 +34,21 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment: github-pages
     outputs:
       has_new_content: ${{ steps.dedup_check.outputs.has_new_content }}
       skip_reason: ${{ steps.dedup_check.outputs.skip_reason }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Varsを確認
+        run: |
+          test -n "${{ vars.LANGUAGE }}"   || { echo "LANGUAGE is empty"; exit 1; }
+          test -n "${{ vars.CATEGORIES }}" || { echo "CATEGORIES is empty"; exit 1; }
+          test -n "${{ vars.MODEL_NAME }}" || { echo "MODEL_NAME is empty"; exit 1; }
+          echo "LANGUAGE=${{ vars.LANGUAGE }}"
+          echo "CATEGORIES=${{ vars.CATEGORIES }}"
+          echo "MODEL_NAME=${{ vars.MODEL_NAME }}"
 
       - name: 依存関係をインストール
         run: |
@@ -68,11 +78,9 @@ jobs:
           cd daily_arxiv
           export OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
           export OPENAI_BASE_URL=${{ secrets.OPENAI_BASE_URL }}
-          export LANGUAGE="${{ inputs.language || vars.LANGUAGE }}"
-          [ -z "$LANGUAGE" ] && LANGUAGE="Japanese"
-          export CATEGORIES="${{ inputs.categories || vars.CATEGORIES }}"
-          [ -z "$CATEGORIES" ] && CATEGORIES="cs.AI,cs.LG,cs.CL,cs.CV,stat.ML,cs.IR,cs.HC,cs.SE,q-fin.ST"
-          export MODEL_NAME="${{ inputs.model_name || vars.MODEL_NAME }}"
+          export LANGUAGE="${{ vars.LANGUAGE }}"
+          export CATEGORIES="${{ vars.CATEGORIES }}"
+          export MODEL_NAME="${{ vars.MODEL_NAME }}"
           echo "LANGUAGE=$LANGUAGE"
           echo "CATEGORIES=$CATEGORIES"
 
@@ -140,9 +148,8 @@ jobs:
           cd ai
           export OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
           export OPENAI_BASE_URL=${{ secrets.OPENAI_BASE_URL }}
-          export LANGUAGE="${{ inputs.language || vars.LANGUAGE }}"
-          [ -z "$LANGUAGE" ] && LANGUAGE="Japanese"
-          export MODEL_NAME="${{ inputs.model_name || vars.MODEL_NAME }}"
+          export LANGUAGE="${{ vars.LANGUAGE }}"
+          export MODEL_NAME="${{ vars.MODEL_NAME }}"
           if [ -z "$MODEL_NAME" ]; then
             export MODEL_NAME="gemini-2.5-pro-preview"
           fi
@@ -164,8 +171,7 @@ jobs:
           today=${{ steps.crawl_step.outputs.crawl_date }}
           echo "Markdown 形式への変換を開始します..."
 
-          export LANGUAGE="${{ inputs.language || vars.LANGUAGE }}"
-          [ -z "$LANGUAGE" ] && LANGUAGE="Japanese"
+          export LANGUAGE="${{ vars.LANGUAGE }}"
           cd to_md
           AI_FILE="../data/${today}_AI_enhanced_${LANGUAGE}.jsonl"
 
