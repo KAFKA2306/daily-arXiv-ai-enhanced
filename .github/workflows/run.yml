@@ -46,9 +46,11 @@ jobs:
           test -n "${{ vars.LANGUAGE }}"   || { echo "LANGUAGE is empty"; exit 1; }
           test -n "${{ vars.CATEGORIES }}" || { echo "CATEGORIES is empty"; exit 1; }
           test -n "${{ vars.MODEL_NAME }}" || { echo "MODEL_NAME is empty"; exit 1; }
+          test -n "${{ vars.MIN_INTERVAL_SECONDS }}" || { echo "MIN_INTERVAL_SECONDS is empty"; exit 1; }
           echo "LANGUAGE=${{ vars.LANGUAGE }}"
           echo "CATEGORIES=${{ vars.CATEGORIES }}"
           echo "MODEL_NAME=${{ vars.MODEL_NAME }}"
+          echo "MIN_INTERVAL_SECONDS=${{ vars.MIN_INTERVAL_SECONDS }}"
 
       - name: 依存関係をインストール
         run: |
@@ -150,6 +152,7 @@ jobs:
           export OPENAI_BASE_URL=${{ secrets.OPENAI_BASE_URL }}
           export LANGUAGE="${{ vars.LANGUAGE }}"
           export MODEL_NAME="${{ vars.MODEL_NAME }}"
+          export MIN_INTERVAL_SECONDS="${{ vars.MIN_INTERVAL_SECONDS }}"
           if [ -z "$MODEL_NAME" ]; then
             export MODEL_NAME="gemini-2.5-pro-preview"
           fi
@@ -157,7 +160,7 @@ jobs:
             export OPENAI_BASE_URL="https://generativelanguage.googleapis.com/v1beta/openai"
           fi
 
-          python enhance.py --data ../data/${today}.jsonl
+          python enhance.py --data ../data/${today}.jsonl --min-interval-secs "$MIN_INTERVAL_SECONDS"
           if [ $? -ne 0 ]; then
               echo "AI処理に失敗しました"
               exit 1
