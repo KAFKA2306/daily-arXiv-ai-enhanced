@@ -515,7 +515,7 @@ function selectLanguageForDate(date, preferredLanguage = null) {
   const availableLanguages = window.dateLanguageMap?.get(date) || [];
   
   if (availableLanguages.length === 0) {
-    return 'English'; // fallback
+    return 'Japanese'; // fallback
   }
   
   // Use provided preference or detect from browser
@@ -527,7 +527,7 @@ function selectLanguageForDate(date, preferredLanguage = null) {
   }
   
   // Fallback: prefer English if available, otherwise use the first available
-  return availableLanguages.includes('English') ? 'English' : availableLanguages[0];
+  return availableLanguages.includes('Japanese') ? 'Japanese' : availableLanguages[0];
 }
 
 async function fetchAvailableDates() {
@@ -1381,7 +1381,7 @@ function toggleView() {
 
 function formatDate(dateString) {
   const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', {
+  return date.toLocaleDateString('ja-JP', {
     year: 'numeric',
     month: 'numeric',
     day: 'numeric'

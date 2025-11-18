@@ -74,7 +74,7 @@ function showEmptyTagMessage() {
   const emptyMessage = document.createElement('div');
   emptyMessage.id = 'emptyTagMessage';
   emptyMessage.className = 'empty-tag-message';
-  emptyMessage.textContent = 'No keywords added yet. Add some keywords below.';
+  emptyMessage.textContent = 'キーワードが登録されていません。下の入力欄から追加してください。';
   selectedKeywordsContainer.appendChild(emptyMessage);
 }
 
@@ -84,7 +84,7 @@ function showEmptyAuthorMessage() {
   const emptyMessage = document.createElement('div');
   emptyMessage.id = 'emptyAuthorMessage';
   emptyMessage.className = 'empty-tag-message';
-  emptyMessage.textContent = 'No authors added yet. Add some authors below.';
+  emptyMessage.textContent = '著者が登録されていません。下の入力欄から追加してください。';
   selectedAuthorsContainer.appendChild(emptyMessage);
 }
 
@@ -296,7 +296,7 @@ function saveSettings() {
   localStorage.setItem('preferredAuthors', JSON.stringify(authors));
   
   // 显示保存成功提示，添加成功图标
-  showNotification('Settings saved successfully!', 'success');
+  showNotification('設定を保存しました。', 'success');
 }
 
 // 重置设置
@@ -314,7 +314,7 @@ function resetSettings() {
   showEmptyAuthorMessage();
   
   // 显示重置成功提示
-  showNotification('Settings reset to default!', 'info');
+  showNotification('設定を初期状態に戻しました。', 'info');
 }
 
 // 显示通知
