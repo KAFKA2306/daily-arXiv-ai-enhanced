@@ -1,7 +1,7 @@
 # リポジトリ概要
 本プロジェクトは https://arxiv.org の最新論文を毎日クロールし、LLM（既定では DeepSeek）で**日本語要約**を生成して GitHub Pages に公開する自動パイプラインです。サーバー不要で、GitHub Actions + Pages のみで運用できます。
 
-最新の公開サイトは `https://kafka2306.github.io/daily-arXiv-ai-enhanced/` で閲覧できます。
+最新の公開サイトは https://kafka2306.github.io/daily-arXiv-ai-enhanced/ で閲覧できます。
 
 > **法的注意**: 学術データに関する各国の規制や検閲要件を必ず確認してください。派生物を公開する場合は、中国本土からアクセス可能な入口を削除し、原論文および AI 生成物の内容審査を行う義務があります。
 
@@ -42,13 +42,60 @@
 - `python3 update_readme.py` : README 再生成。
 - `bash setup-local-auth.sh` : `js/auth-config.js` にパスワードハッシュを注入。
 
+## 設定値の変更ガイド
+本番の GitHub Actions、ローカル検証、公開サイトの 3 つで設定箇所が分かれます。下記の手順に沿って更新すると、検索条件や API、サイトの挙動を安全に変更できます。
+
+### 1. API／LLM 設定
+#### GitHub Actions（本番環境）
+1. GitHub のリポジトリで「Settings（設定）> Secrets and variables > Actions」を開きます。
+2. **Secrets** に以下を登録します。
+   - `OPENAI_API_KEY`: 利用する API キー（必須）。Gemini を使用する場合もキーを格納します。
+   - `OPENAI_BASE_URL`: 既定は空で問題ありません。OpenAI 公式を使うなら `https://api.openai.com/v1`、Gemini なら `https://generativelanguage.googleapis.com/v1beta/openai` などを入力します。
+   - `ACCESS_PASSWORD`: サイトをパスワード保護したい場合のみ設定します。未設定なら公開ページは誰でも閲覧できます。
+3. **Variables** に以下を登録または更新します。
+   - `MODEL_NAME`: 例 `gemini-2.5-pro-preview`。Gemini 系を指定した場合はワークフローが自動で `OPENAI_BASE_URL` を補完します。
+   - `LANGUAGE`: 要約出力言語。既定は `Japanese`（AI 出力ファイル名や Markdown ファイルの参照言語にも使われます）。
+   - `EMAIL` / `NAME`: CI がコミットする際の `user.email` / `user.name`。
+4. 変更後に `Actions > arXiv-daily-ai-enhanced > Run workflow` から手動実行し、ログで `Using model ...` `OPENAI_BASE_URL=...` が期待通りか確認します。
+
+#### ローカル検証用の設定
+1. ルートに `.env` を作成し、以下のように記述します（`.env` はコミットしないでください）。
+   ```bash
+   OPENAI_API_KEY=xxxxx
+   OPENAI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+   LANGUAGE=Japanese
+   CATEGORIES="cs.AI, cs.CL"
+   MODEL_NAME=gemini-2.5-pro-preview
+   ACCESS_PASSWORD=任意のパスワード
+   ```
+2. `source .venv/bin/activate && export $(cat .env | xargs)` のように読み込んでから `bash run.sh` を実行すると、CI と同じ設定で再現できます。
+3. パスワード付きでローカル UI を試す場合は `.env` を読み込んだ状態で `bash setup-local-auth.sh` を実行し、生成された `js/auth-config.js` をブラウザで参照します。
+
+### 2. クローリング対象・検索条件の更新手順
+1. GitHub の「Settings > Secrets and variables > Actions > Variables」で `CATEGORIES` を編集します。値は `cs.AI, cs.CL` のようにカンマ区切り・半角スペース付きで記述すると `daily_arxiv/daily_arxiv/spiders/arxiv.py` のパーサーと一致します。
+2. `LANGUAGE` を変更すると `ai/enhance.py` が `<日付>_AI_enhanced_<LANGUAGE>.jsonl` を生成し、`to_md/convert.py` の `--data` 引数にも同じ言語名が必要になります。
+3. 変更の事前確認にはローカルで `scrapy crawl arxiv -o data/テスト日付.jsonl` を実行し、`python daily_arxiv/daily_arxiv/check_stats.py` が終了コード `0` で終わるか確認してください。
+4. カテゴリ追加や除外の結果を即時に反映させたい場合は `Actions` から手動でワークフローを起動するか、ローカルで `bash run.sh` を回して差分を `git diff data/` で確認します。
+5. サイト側でキーワード検索や本文全文検索をデフォルト状態に戻したい場合は `localStorage` を空にするか、後述の `settings.html` で「Reset to Default」を押します。これにより API 側で増減させたカテゴリのみが反映されます。
+
+### 3. サイト設定（UI／ローカル検索／認証）
+#### 公開ページのテキスト・ロゴ
+1. サイトタイトルや説明文を変える場合は `index.html`, `settings.html`, `statistic.html` の `<head>` 内にある `<title>`/`meta`/ロゴ経路を編集します。
+2. 画像やサンプル Markdown を差し替える場合は `assets/` `images/` に置き換え、`assets/file-list.txt` を `bash run.sh` で再生成しておきます。
+3. 変更内容を GitHub Pages に反映させるには `git add` → `git commit` の後、CI もしくは `Actions` でのデプロイ完了を確認します。
+
+#### フロントエンド検索・フィルタの操作
+1. ブラウザで `https://<ユーザー名>.github.io/daily-arXiv-ai-enhanced/settings.html` を開き、`Preferred Keywords` / `Preferred Authors` 入力欄に文字列を入れて `Add` ボタンを押します。
+2. 追加した条件は `localStorage.preferredKeywords` / `localStorage.preferredAuthors` に配列として保存され、`index.html` 側のフィルタタブに即時反映されます。
+3. 条件を削除したい場合は各タグの `×` を押すか、ページ最下部の「Reset to Default」を押してください。`Reset` は `localStorage` を完全に初期化します。
+4. テキスト検索バー（虫眼鏡アイコン）を使うと、AI 要約本文やタイトルの全文検索がオンになります。状態はセッション毎に保持され、追加の設定ファイルは不要です。
+
+#### パスワード保護
+1. 公開サイトにログイン保護をかけたい場合、GitHub の Secrets に `ACCESS_PASSWORD` を追加します。CI が `js/auth-config.js` の `passwordHash` を自動上書きし、`login.html` が有効になります。
+2. ローカルで同じ挙動を再現するには `.env` に `ACCESS_PASSWORD` を入れた上で `bash setup-local-auth.sh` を実行し、その後に `login.html` をブラウザで開いて入力テストを行います。
+
 ## GitHub Pages 設定メモ
 1. GitHub の `Settings > Pages` で `Build and deployment` を `Deploy from a branch` に設定。
 2. `Branch` を `main`, `/(root)` に指定し保存。
 3. デプロイ完了後、`https://<ユーザー名>.github.io/daily-arXiv-ai-enhanced/` を確認。`pages-build-deployment` ワークフローが成功しているか `Actions` で確認できます。
 4. カスタムドメインを使う場合は `Custom domain` を設定し、DNS を `username.github.io` に向け、HTTPS を有効にしてください。
-
-## キーワード／著者フィルタの設定方法
-- `settings.html` からキーワード／著者を入力して `Add` すると、`localStorage` の `preferredKeywords` / `preferredAuthors` に保存されます（実装: `js/settings.js`, `js/app.js`）。
-- `Reset to Default` ボタンで初期化、`Save Settings` で即時保存、パスワード保護時は `Auth.logout()` で再認証できます。
-- arXivカテゴリ自体を変える場合は GitHub の `Settings > Secrets and variables > Actions > Variables` にある `CATEGORIES` を更新し、次回ワークフロー実行で反映されます。

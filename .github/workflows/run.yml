@@ -4,6 +4,23 @@ on:
   schedule:
     - cron: "30 1 * * *"
   workflow_dispatch:
+    inputs:
+      date:
+        description: "処理対象日 (YYYY-MM-DD, 省略でUTC当日)"
+        required: false
+        type: string
+      language:
+        description: "言語 (Japanese/English など)"
+        required: false
+        type: string
+      categories:
+        description: "arXivカテゴリ（カンマ区切り）"
+        required: false
+        type: string
+      model_name:
+        description: "LLMモデル名 (例: gemini-2.5-pro-preview)"
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -32,7 +49,11 @@ jobs:
         id: crawl_step
         run: |
           source .venv/bin/activate
-          today=$(date -u "+%Y-%m-%d")
+          if [ -n "${{ inputs.date }}" ]; then
+            today="${{ inputs.date }}"
+          else
+            today=$(date -u "+%Y-%m-%d")
+          fi
           echo "本日 $today の arXiv 論文クロールを開始します..."
 
           # 当日のファイルが存在するか確認し、存在する場合は削除して再作成
@@ -47,12 +68,13 @@ jobs:
           cd daily_arxiv
           export OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
           export OPENAI_BASE_URL=${{ secrets.OPENAI_BASE_URL }}
-          export LANGUAGE="${{ vars.LANGUAGE }}"
-          if [ -z "$LANGUAGE" ]; then
-            export LANGUAGE="Japanese"
-          fi
-          export CATEGORIES="${{ vars.CATEGORIES }}"
-          export MODEL_NAME="${{ vars.MODEL_NAME }}"
+          export LANGUAGE="${{ inputs.language || vars.LANGUAGE }}"
+          [ -z "$LANGUAGE" ] && LANGUAGE="Japanese"
+          export CATEGORIES="${{ inputs.categories || vars.CATEGORIES }}"
+          [ -z "$CATEGORIES" ] && CATEGORIES="cs.AI,cs.LG,cs.CL,cs.CV,stat.ML,cs.IR,cs.HC,cs.SE,q-fin.ST"
+          export MODEL_NAME="${{ inputs.model_name || vars.MODEL_NAME }}"
+          echo "LANGUAGE=$LANGUAGE"
+          echo "CATEGORIES=$CATEGORIES"
 
           # MODEL_NAME が未設定の際に備えてデフォルト値を提供
           if [ -z "$MODEL_NAME" ]; then
@@ -118,8 +140,9 @@ jobs:
           cd ai
           export OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
           export OPENAI_BASE_URL=${{ secrets.OPENAI_BASE_URL }}
-          export LANGUAGE="${{ vars.LANGUAGE }}"
-          export MODEL_NAME="${{ vars.MODEL_NAME }}"
+          export LANGUAGE="${{ inputs.language || vars.LANGUAGE }}"
+          [ -z "$LANGUAGE" ] && LANGUAGE="Japanese"
+          export MODEL_NAME="${{ inputs.model_name || vars.MODEL_NAME }}"
           if [ -z "$MODEL_NAME" ]; then
             export MODEL_NAME="gemini-2.5-pro-preview"
           fi
@@ -141,7 +164,8 @@ jobs:
           today=${{ steps.crawl_step.outputs.crawl_date }}
           echo "Markdown 形式への変換を開始します..."
 
-          export LANGUAGE="${{ vars.LANGUAGE }}"
+          export LANGUAGE="${{ inputs.language || vars.LANGUAGE }}"
+          [ -z "$LANGUAGE" ] && LANGUAGE="Japanese"
           cd to_md
           AI_FILE="../data/${today}_AI_enhanced_${LANGUAGE}.jsonl"
 

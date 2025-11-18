@@ -18,3 +18,8 @@ dependencies = [
     "ruff",
 ]
 license = "Apache-2.0"
+
+[tool.ruff]
+ignore = ["F401","F841","F821","F405"]
+line-length = 120
+target-version = "py312"
