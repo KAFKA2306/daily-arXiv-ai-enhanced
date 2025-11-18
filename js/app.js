@@ -527,7 +527,7 @@ async function fetchAvailableDates() {
   try {
     const response = await fetch('assets/file-list.txt');
     if (!response.ok) {
-      console.error('Error fetching file list:', response.status);
+      console.error('ファイル一覧の取得に失敗しました:', response.status);
       return [];
     }
     const text = await response.text();
