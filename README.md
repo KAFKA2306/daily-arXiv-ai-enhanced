@@ -1,6 +1,8 @@
 # リポジトリ概要
 本プロジェクトは https://arxiv.org の最新論文を毎日クロールし、LLM（既定では DeepSeek）で**日本語要約**を生成して GitHub Pages に公開する自動パイプラインです。サーバー不要で、GitHub Actions + Pages のみで運用できます。
 
+最新の公開サイトは `https://kafka2306.github.io/daily-arXiv-ai-enhanced/` で閲覧できます。
+
 > **法的注意**: 学術データに関する各国の規制や検閲要件を必ず確認してください。派生物を公開する場合は、中国本土からアクセス可能な入口を削除し、原論文および AI 生成物の内容審査を行う義務があります。
 
 ## 主な機能
@@ -15,20 +17,20 @@
 - Pages を有効化すると `https://<GitHubユーザー名>.github.io/daily-arXiv-ai-enhanced/` で閲覧できます。
 
 ## GitHub Actions 設定と実行フロー
-1. リポジトリを fork し、必要なら `buy-me-a-coffee/README.md` などの著者情報を更新します。
-2. `Settings > Secrets and variables > Actions` に以下を登録します。
-   - **Secrets**: `OPENAI_API_KEY`, `OPENAI_BASE_URL`, （任意）`ACCESS_PASSWORD`。
-   - **Variables**: `CATEGORIES`（例: `cs.CL, cs.CV`）、`LANGUAGE=Japanese`、`MODEL_NAME`、`EMAIL`、`NAME`。
-3. `.github/workflows/run.yml` の主なステップと実行コマンド:
-   - 依存解決: `curl -LsSf https://astral.sh/uv/install.sh | sh` → `uv sync`
-   - クローリング: `. venv` 有効化後 `scrapy crawl arxiv -o data/<日付>.jsonl`
-   - 重複検査: `python daily_arxiv/check_stats.py`
-   - AI 要約: `python ai/enhance.py --data data/<日付>.jsonl`
-   - Markdown 変換: `python to_md/convert.py --data data/<日付>_AI_enhanced_<LANGUAGE>.jsonl`
-   - ファイル一覧更新: `ls data/*.jsonl | sed 's|data/||' > assets/file-list.txt`
-   - 認証設定: `js/auth-config.js` の `PLACEHOLDER_PASSWORD_HASH` を Secrets ベースのハッシュで置換
-4. `Actions > arXiv-daily-ai-enhanced` から `Run workflow` ボタンで手動実行できます。デフォルトのスケジュールは cron `30 1 * * *` (UTC) です。必要に応じて `run.yml` の `schedule` を編集してください。
-5. README を更新したい場合はこの `template.md` を編集し、`python3 update_readme.py`（Windows なら `py update_readme.py` など）を実行して再生成します。
+2. `Settings > Secrets and variables > Actions` で以下を設定します。
+   - **Secrets**: `OPENAI_API_KEY`（必須）、`OPENAI_BASE_URL`（Gemini 以外を使う場合のみ）、`ACCESS_PASSWORD`（任意。未設定だとハッシュは `DISABLED_NO_PASSWORD_SET_IN_SECRETS` で固定）。
+   - **Variables**: `CATEGORIES`（例: `cs.CL, cs.CV`）、`LANGUAGE`（未指定時は自動で `Japanese`）、`MODEL_NAME`（未指定時は `gemini-2.5-pro-preview`）、`EMAIL` と `NAME`（CI が git commit/push する際に使用）。
+3. `.github/workflows/run.yml` は以下の構成です（`permissions` で `contents/pages/id-token` を write に設定し、`concurrency` で `github-pages` グループを共有）。
+   - **依存インストール**: `actions/checkout@v4` → `uv` をスクリプトで導入し `uv sync`。すべて `.venv` に展開します。
+   - **Crawl ステップ**: `.venv` を有効化し、日付付き JSONL を再生成。`LANGUAGE` と `MODEL_NAME` は空ならデフォルトをセットし、`MODEL_NAME` が `gemini-*` なら `OPENAI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai` を自動補完します。
+   - **Dedup ステップ**: `python daily_arxiv/check_stats.py` の終了コードを `has_new_content`/`skip_reason` に変換。`1`（新規なし）や `2`（処理エラー）の場合は後続処理をスキップします。
+   - **AI → Markdown**: 新規データがある場合のみ `ai/enhance.py` → `to_md/convert.py` を実行し、`assets/file-list.txt` をリストアップ。`update_readme.py` が存在すれば README も再生成します。
+   - **認証ハッシュ更新**: `ACCESS_PASSWORD` を openssl で SHA-256 化し、`js/auth-config.js` の `passwordHash` 値を `python3 -c` ワンライナーで置換。未設定時は警告だけ出して固定文字列を埋め込みます。
+   - **サマリー & Commit/Pull/Push**: dedup が `true` のときのみ `git add .` → `git commit -m "update: <UTC日付> arXiv papers"` → 最大 3 回リトライ付きで `git push origin main`。push 失敗時は都度 `git pull --no-edit` でリベースします。
+   - **GitHub Pages アーティファクト**: `public-site/` を作成し、`index.html` `settings.html` `login.html` `statistic.html` をコピー → `actions/upload-pages-artifact@v4` でアップロードします。
+   - **Deploy ジョブ**: `needs: build` の `deploy` ジョブが `actions/deploy-pages@v4` を呼び出し、`environment: github-pages` へ公開。`steps.deployment.outputs.page_url` が自動で環境 URL に入ります。
+4. ワークフローは cron `30 1 * * *`（UTC、毎日 10:30 JST）で自動実行され、`Actions > arXiv-daily-ai-enhanced > Run workflow` から手動起動も可能です。dedup で新着が無い場合は Crawl の成果のみで終了し、Pages デプロイ・コミットはスキップされます。
+5. README の反映を強制したい場合は `template.md` を編集し、`python3 update_readme.py`（もしくは CI 実行で自動）を使って `README.md` を再生成してください。
 
 ## ローカル実行と検証コマンド
 - `uv sync` : `pyproject.toml` / `uv.lock` を基に Python 3.12 依存を `.venv` へ展開。
