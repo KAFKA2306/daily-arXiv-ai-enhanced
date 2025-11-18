@@ -17,7 +17,7 @@ if [ -z "$OPENAI_API_KEY" ]; then
     echo ""
     echo "🔧 可选变量 / Optional variables:"
     echo "   export OPENAI_BASE_URL=\"https://generativelanguage.googleapis.com/v1beta/openai\"  # API基础URL / API base URL"
-    echo "   export LANGUAGE=\"Chinese\"                           # 语言设置 / Language setting"
+    echo "   export LANGUAGE=\"Japanese\"                          # 言語設定 / Language setting (既定: 日本語)"
     echo "   export CATEGORIES=\"cs.CV, cs.CL\"                    # 关注分类 / Categories of interest"
     echo "   export MODEL_NAME=\"gemini-pro-2.5-preview\"          # 模型名称 / Model name"
     echo ""
@@ -35,7 +35,7 @@ else
     PARTIAL_MODE=false
     
     # 设置默认值 / Set default values
-    export LANGUAGE="${LANGUAGE:-Chinese}"
+    export LANGUAGE="${LANGUAGE:-Japanese}"
     export CATEGORIES="${CATEGORIES:-cs.CV, cs.CL}"
     export MODEL_NAME="${MODEL_NAME:-gemini-pro-2.5-preview}"
     if [ -z "$OPENAI_BASE_URL" ]; then

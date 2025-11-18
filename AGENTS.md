@@ -1,4 +1,4 @@
-# Repository Guidelines
+# リポジトリガイドライン
 
 ## プロジェクト構成とモジュール
 Scrapy プロジェクトは `daily_arxiv/daily_arxiv` にあり、spider、pipeline、重複検査 (`check_stats.py`) が `data/YYYY-MM-DD.jsonl` を生成します。`ai/` 配下の `enhance.py` とテンプレート群が AI 要約ファイル `<date>_AI_enhanced_<LANG>.jsonl` を作り、`to_md/convert.py` と `paper_template.md` が GitHub Pages 用 Markdown を出力します。静的サイトは `index.html`、`settings.html`、`css/`、`js/`、`assets/`、`images/` で構成され、`update_readme.py`、`template.md`、`readme_content_template.md` がドキュメントを再生成します。大きな成果物は `data/` か厳選サンプル用の `assets/` `images/` に限定してください。
@@ -8,7 +8,7 @@ Scrapy プロジェクトは `daily_arxiv/daily_arxiv` にあり、spider、pipe
 - `source .venv/bin/activate && bash run.sh` が crawl → dedup → AI → Markdown を一括実行。事前に `OPENAI_API_KEY` `OPENAI_BASE_URL` `LANGUAGE` `CATEGORIES` `MODEL_NAME` を export。
 - `scrapy crawl arxiv -o data/2025-11-18.jsonl` は AI 処理を飛ばして spider 改修を検証。
 - `python daily_arxiv/daily_arxiv/check_stats.py` は dedup 結果を表示し、終了コード `0` 続行 `1` 新規なし `2` エラーを示します。
-- `python ai/enhance.py --data data/2025-11-18.jsonl` と `python to_md/convert.py --data data/2025-11-18_AI_enhanced_Chinese.jsonl` で後段ステージを個別に確認。
+- `python ai/enhance.py --data data/2025-11-18.jsonl` と `python to_md/convert.py --data data/2025-11-18_AI_enhanced_Japanese.jsonl` で後段ステージを個別に確認。
 
 ## コーディング規約と命名
 Python コードは PEP 8、インデント 4 スペース、`snake_case` 関数、定数は大文字、公開ヘルパーへ docstring を付与。Scrapy の spider 名は小文字 (`arxiv` など)、pipeline クラス名は役割を明確に。YAML と環境変数キーは既存の大文字小文字を踏襲します。フロントエンド JS は camelCase、CSS セレクタは kebab-case、静的ファイル名は短く意味のある語を使います。
