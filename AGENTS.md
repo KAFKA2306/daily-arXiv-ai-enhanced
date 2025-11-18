@@ -1,5 +1,7 @@
 # リポジトリガイドライン
 
+英語と中国語はすべて日本語に翻訳すること。
+
 ## プロジェクト構成とモジュール
 Scrapy プロジェクトは `daily_arxiv/daily_arxiv` にあり、spider、pipeline、重複検査 (`check_stats.py`) が `data/YYYY-MM-DD.jsonl` を生成します。`ai/` 配下の `enhance.py` とテンプレート群が AI 要約ファイル `<date>_AI_enhanced_<LANG>.jsonl` を作り、`to_md/convert.py` と `paper_template.md` が GitHub Pages 用 Markdown を出力します。静的サイトは `index.html`、`settings.html`、`css/`、`js/`、`assets/`、`images/` で構成され、`update_readme.py`、`template.md`、`readme_content_template.md` がドキュメントを再生成します。大きな成果物は `data/` か厳選サンプル用の `assets/` `images/` に限定してください。
 
