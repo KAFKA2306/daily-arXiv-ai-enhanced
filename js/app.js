@@ -500,13 +500,6 @@ function initEventListeners() {
 
 // Function to detect preferred language based on browser settings
 function getPreferredLanguage() {
-  const browserLang = navigator.language || navigator.userLanguage;
-  if (browserLang.startsWith('ja')) {
-    return 'Japanese';
-  }
-  if (browserLang.startsWith('en')) {
-    return 'English';
-  }
   return 'Japanese';
 }
 
@@ -526,7 +519,7 @@ function selectLanguageForDate(date, preferredLanguage = null) {
     return preferred;
   }
   
-  // Fallback: prefer English if available, otherwise use the first available
+  // フォールバック: 日本語がなければ最初に利用可能な言語を使用
   return availableLanguages.includes('Japanese') ? 'Japanese' : availableLanguages[0];
 }
 
@@ -654,7 +647,7 @@ async function loadPapersByDate(date) {
   container.innerHTML = `
     <div class="loading-container">
       <div class="loading-spinner"></div>
-      <p>Loading paper...</p>
+      <p>論文を読み込み中...</p>
     </div>
   `;
   
@@ -666,7 +659,7 @@ async function loadPapersByDate(date) {
       if (response.status === 404) {
         container.innerHTML = `
           <div class="loading-container">
-            <p>No papers found for this date.</p>
+            <p>該当日の論文は見つかりませんでした。</p>
           </div>
         `;
         paperData = {};
@@ -680,7 +673,7 @@ async function loadPapersByDate(date) {
     if (!text || text.trim() === '') {
       container.innerHTML = `
         <div class="loading-container">
-          <p>No papers found for this date.</p>
+          <p>該当日の論文は見つかりませんでした。</p>
         </div>
       `;
       paperData = {};
@@ -699,8 +692,8 @@ async function loadPapersByDate(date) {
     console.error('加载论文数据失败:', error);
     container.innerHTML = `
       <div class="loading-container">
-        <p>Loading data fails. Please retry.</p>
-        <p>Error messages: ${error.message}</p>
+        <p>データの読み込みに失敗しました。再度お試しください。</p>
+        <p>エラー内容: ${error.message}</p>
       </div>
     `;
   }
@@ -1080,7 +1073,7 @@ function renderPapers() {
   if (filteredPapers.length === 0) {
     container.innerHTML = `
       <div class="loading-container">
-        <p>No paper found.</p>
+        <p>該当する論文が見つかりません。</p>
       </div>
     `;
     return;
@@ -1226,19 +1219,19 @@ function showPaperDetails(paper, paperIndex) {
   
   const modalContent = `
     <div class="paper-details ${matchedPaperClass}">
-      <p><strong>Authors: </strong>${highlightedAuthors}</p>
-      <p><strong>Categories: </strong>${categoryDisplay}</p>
-      <p><strong>Date: </strong>${formatDate(paper.date)}</p>
+      <p><strong>著者: </strong>${highlightedAuthors}</p>
+      <p><strong>カテゴリ: </strong>${categoryDisplay}</p>
+      <p><strong>日付: </strong>${formatDate(paper.date)}</p>
       
       
       <h3>TL;DR</h3>
       <p>${highlightedSummary}</p>
       
       <div class="paper-sections">
-        ${paper.motivation ? `<div class="paper-section"><h4>Motivation</h4><p>${highlightedMotivation}</p></div>` : ''}
-        ${paper.method ? `<div class="paper-section"><h4>Method</h4><p>${highlightedMethod}</p></div>` : ''}
-        ${paper.result ? `<div class="paper-section"><h4>Result</h4><p>${highlightedResult}</p></div>` : ''}
-        ${paper.conclusion ? `<div class="paper-section"><h4>Conclusion</h4><p>${highlightedConclusion}</p></div>` : ''}
+        ${paper.motivation ? `<div class="paper-section"><h4>背景</h4><p>${highlightedMotivation}</p></div>` : ''}
+        ${paper.method ? `<div class="paper-section"><h4>手法</h4><p>${highlightedMethod}</p></div>` : ''}
+        ${paper.result ? `<div class="paper-section"><h4>結果</h4><p>${highlightedResult}</p></div>` : ''}
+        ${paper.conclusion ? `<div class="paper-section"><h4>結論</h4><p>${highlightedConclusion}</p></div>` : ''}
       </div>
       
       ${highlightedAbstract ? `<h3>Abstract</h3><p class="original-abstract">${highlightedAbstract}</p>` : ''}
@@ -1314,7 +1307,7 @@ function navigateToNextPaper() {
 function showRandomPaper() {
   // 检查是否有可用的论文
   if (currentFilteredPapers.length === 0) {
-    console.log('No papers available to show random paper');
+    console.log('ランダム表示できる論文がありません');
     return;
   }
   
@@ -1395,7 +1388,7 @@ async function loadPapersByDateRange(startDate, endDate) {
   });
   
   if (validDatesInRange.length === 0) {
-    alert('No available papers in the selected date range.');
+    alert('選択した期間に利用できる論文がありません。');
     return;
   }
   
@@ -1409,7 +1402,7 @@ async function loadPapersByDateRange(startDate, endDate) {
   container.innerHTML = `
     <div class="loading-container">
       <div class="loading-spinner"></div>
-      <p>Loading papers from ${formatDate(startDate)} to ${formatDate(endDate)}...</p>
+      <p>${formatDate(startDate)} から ${formatDate(endDate)} までの論文を読み込み中...</p>
     </div>
   `;
   
@@ -1443,8 +1436,8 @@ async function loadPapersByDateRange(startDate, endDate) {
     console.error('加载论文数据失败:', error);
     container.innerHTML = `
       <div class="loading-container">
-        <p>Loading data fails. Please retry.</p>
-        <p>Error messages: ${error.message}</p>
+        <p>データの読み込みに失敗しました。再度お試しください。</p>
+        <p>エラー内容: ${error.message}</p>
       </div>
     `;
   }

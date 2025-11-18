@@ -114,13 +114,6 @@ function initEventListeners() {
 
 // Function to detect preferred language based on browser settings
 function getPreferredLanguage() {
-  const browserLang = navigator.language || navigator.userLanguage;
-  if (browserLang.startsWith('ja')) {
-    return 'Japanese';
-  }
-  if (browserLang.startsWith('en')) {
-    return 'English';
-  }
   return 'Japanese';
 }
 
@@ -140,7 +133,7 @@ function selectLanguageForDate(date, preferredLanguage = null) {
     return preferred;
   }
   
-  // Fallback: prefer English if available, otherwise use the first available
+  // フォールバック: 日本語がなければ最初に利用可能な言語を使用
   return availableLanguages.includes('Japanese') ? 'Japanese' : availableLanguages[0];
 }
 
