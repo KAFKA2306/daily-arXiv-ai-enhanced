@@ -64,6 +64,9 @@
    - `MODEL_NAME`: 例 `gemini-2.5-pro-preview`。Gemini 系を指定した場合はワークフローが自動で `OPENAI_BASE_URL` を補完します。
    - `LANGUAGE`: 要約出力言語。既定は `Japanese`（AI 出力ファイル名や Markdown ファイルの参照言語にも使われます）。
    - `MIN_INTERVAL_SECONDS`: LLM 呼び出しのグローバル最小間隔（秒）。CI ではこの値が `--min-interval-secs` に渡され、並列ワーカーがあっても常に 1 コールごとに最低この時間だけ待機します。60 秒推奨。
+   - `MAX_PAPERS`: 1 日あたりに取得する論文件数（1 以上の整数、既定 10）。AI コストや Markdown サイズに直結するため、必要に応じて調整してください。
+   - `SORT_BY`: `popularity`/`relevance`/`submitted_date`/`last_updated_date` のいずれか。arXiv API の `sort_by` にマップされます。
+   - `SORT_ORDER`: `desc` または `asc`。`SORT_BY` と組み合わせて取得順序を制御します。
    - `EMAIL` / `NAME`: CI がコミットする際の `user.email` / `user.name`。
 4. 変更後に `Actions > arXiv-daily-ai-enhanced > Run workflow` から手動実行し、ログで `Using model ...` `OPENAI_BASE_URL=...` が期待通りか確認します。
 
@@ -78,6 +81,9 @@
    CATEGORIES="cs.AI, cs.CL"
    MODEL_NAME=gemini-2.5-pro-preview
    MIN_INTERVAL_SECONDS=60
+   MAX_PAPERS=10
+   SORT_BY=popularity
+   SORT_ORDER=desc
    ACCESS_PASSWORD=任意のパスワード
    ```
 
@@ -96,7 +102,8 @@
 2. `LANGUAGE` を変更すると `ai/enhance.py` が `<日付>_AI_enhanced_<LANGUAGE>.jsonl` を生成し、`to_md/convert.py` の `--data` 引数にも同じ言語名が必要になります。
 3. 変更の事前確認にはローカルで `scrapy crawl arxiv -o data/テスト日付.jsonl` を実行し、`python daily_arxiv/daily_arxiv/check_stats.py` が終了コード `0` で終わるか確認してください。
 4. カテゴリ追加や除外の結果を即時に反映させたい場合は `Actions` から手動でワークフローを起動するか、ローカルで `bash run.sh` を回して差分を `git diff data/` で確認します。
-5. サイト側でキーワード検索や本文全文検索をデフォルト状態に戻したい場合は `localStorage` を空にするか、後述の `settings.html` で「Reset to Default」を押します。これにより API 側で増減させたカテゴリのみが反映されます。
+5. 件数や人気順を含む取得方針を変えたい場合は `MAX_PAPERS` `SORT_BY` `SORT_ORDER` を Vars/`.env` で更新します。`daily_arxiv/daily_arxiv/spiders/arxiv.py` が arXiv API を Popularity（=Relevance）基準で呼び出し、設定値に応じて `max_results` と `sort_*` を切り替えます。
+6. サイト側でキーワード検索や本文全文検索をデフォルト状態に戻したい場合は `localStorage` を空にするか、後述の `settings.html` で「Reset to Default」を押します。これにより API 側で増減させたカテゴリのみが反映されます。
 
 ### 3. サイト設定（UI／ローカル検索／認証）
 
