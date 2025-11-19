@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field, field_validator
 import re
 
+
 class Structure(BaseModel):
     tldr: str = Field(description="generate a too long; didn't read summary")
     motivation: str = Field(description="describe the motivation in this paper")

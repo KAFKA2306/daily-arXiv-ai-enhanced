@@ -20,6 +20,9 @@ if [ -z "$OPENAI_API_KEY" ]; then
     echo "   export LANGUAGE=\"Japanese\"                          # 言語設定 / Language setting (既定: 日本語)"
     echo "   export CATEGORIES=\"cs.CV, cs.CL\"                    # 关注分类 / Categories of interest"
     echo "   export MODEL_NAME=\"gemini-2.5-pro-preview\"        # 模型名称 / Model name"
+    echo "   export MAX_PAPERS=\"10\"                             # 1日あたりの取得件数"
+    echo "   export SORT_BY=\"popularity\"                        # 並び順 (popularity/relevance/submitted_date/last_updated_date)"
+    echo "   export SORT_ORDER=\"desc\"                           # 並び順の方向 (desc/asc)"
     echo ""
     echo "💡 设置后重新运行此脚本即可进行完整测试 / After setting, rerun this script for complete testing"
     echo "🚀 或者继续运行部分流程（爬取+去重检查）/ Or continue with partial workflow (crawl + dedup check)"
@@ -75,7 +78,7 @@ else
 fi
 
 cd daily_arxiv
-scrapy crawl arxiv -o ../data/${today}.jsonl
+uv run scrapy crawl arxiv -o ../data/${today}.jsonl
 
 if [ ! -f "../data/${today}.jsonl" ]; then
     echo "爬取失败，未生成数据文件 / Crawling failed, no data file generated"
@@ -84,7 +87,7 @@ fi
 
 # 第二步：检查去重 / Step 2: Check duplicates  
 echo "步骤2：执行去重检查... / Step 2: Performing intelligent deduplication check..."
-python daily_arxiv/check_stats.py
+uv run python daily_arxiv/check_stats.py
 dedup_exit_code=$?
 
 case $dedup_exit_code in
@@ -111,7 +114,7 @@ cd ..
 if [ "$PARTIAL_MODE" = "false" ]; then
     echo "步骤3：AI增强处理... / Step 3: AI enhancement processing..."
     cd ai
-    python enhance.py --data ../data/${today}.jsonl
+    uv run python enhance.py --data ../data/${today}.jsonl
     
     if [ $? -ne 0 ]; then
         echo "❌ AI处理失败 / AI processing failed"
@@ -127,24 +130,23 @@ fi
 echo "步骤4：转换为Markdown... / Step 4: Converting to Markdown..."
 cd to_md
 
-if [ "$PARTIAL_MODE" = "false" ] && [ -f "../data/${today}_AI_enhanced_${LANGUAGE}.jsonl" ]; then
-    echo "📄 使用AI增强后的数据进行转换... / Using AI enhanced data for conversion..."
-    python convert.py --data ../data/${today}_AI_enhanced_${LANGUAGE}.jsonl
-    
-    if [ $? -ne 0 ]; then
-        echo "❌ Markdown转换失败 / Markdown conversion failed"
-        exit 1
-    fi
-    echo "✅ AI增强版Markdown转换完成 / AI enhanced Markdown conversion completed"
-    
-else
-    if [ "$PARTIAL_MODE" = "true" ]; then
-        echo "⏭️  跳过Markdown转换（部分模式，需要AI增强数据）/ Skipping Markdown conversion (partial mode, requires AI enhanced data)"
+if [ "$PARTIAL_MODE" = "false" ]; then
+    if [ -f "../data/${today}_AI_enhanced_${LANGUAGE}.jsonl" ]; then
+        echo "📄 使用AI增强后的数据进行转换... / Using AI enhanced data for conversion..."
+        uv run python convert.py --data ../data/${today}_AI_enhanced_${LANGUAGE}.jsonl
+        
+        if [ $? -ne 0 ]; then
+            echo "❌ Markdown转换失败 / Markdown conversion failed"
+            exit 1
+        fi
+        echo "✅ AI增强版Markdown转换完成 / AI enhanced Markdown conversion completed"
     else
         echo "❌ 错误：未找到AI增强文件 / Error: AI enhanced file not found"
         echo "AI文件: ../data/${today}_AI_enhanced_${LANGUAGE}.jsonl"
         exit 1
     fi
+else
+    echo "⏭️  跳过Markdown转换（部分模式）/ Skipping Markdown conversion (partial mode)"
 fi
 
 cd ..

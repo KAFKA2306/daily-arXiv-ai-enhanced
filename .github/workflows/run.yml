@@ -83,6 +83,24 @@ jobs:
           export LANGUAGE="${{ vars.LANGUAGE }}"
           export CATEGORIES="${{ vars.CATEGORIES }}"
           export MODEL_NAME="${{ vars.MODEL_NAME }}"
+          if [ -n "${{ vars.MAX_PAPERS }}" ]; then
+            export MAX_PAPERS="${{ vars.MAX_PAPERS }}"
+            echo "MAX_PAPERS=$MAX_PAPERS"
+          else
+            echo "MAX_PAPERS=default(10)"
+          fi
+          if [ -n "${{ vars.SORT_BY }}" ]; then
+            export SORT_BY="${{ vars.SORT_BY }}"
+            echo "SORT_BY=$SORT_BY"
+          else
+            echo "SORT_BY=default(popularity)"
+          fi
+          if [ -n "${{ vars.SORT_ORDER }}" ]; then
+            export SORT_ORDER="${{ vars.SORT_ORDER }}"
+            echo "SORT_ORDER=$SORT_ORDER"
+          else
+            echo "SORT_ORDER=default(desc)"
+          fi
           echo "LANGUAGE=$LANGUAGE"
           echo "CATEGORIES=$CATEGORIES"
 

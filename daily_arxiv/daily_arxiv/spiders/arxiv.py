@@ -1,77 +1,94 @@
-import scrapy
 import os
 import re
+from typing import Iterable, List, Optional, Set
+
+import arxiv
+import scrapy
 
 
 class ArxivSpider(scrapy.Spider):
+    """
+    arXiv から人気順（= relevance 優先）で最大 MAX_PAPERS 件を取得するクローラ。
+    取得件数や並び順は環境変数で上書きできる。
+    """
+
+    name = "arxiv"
+    allowed_domains = ["arxiv.org"]
+
+    SORT_MAPPING = {
+        "popularity": arxiv.SortCriterion.Relevance,
+        "relevance": arxiv.SortCriterion.Relevance,
+        "submitted_date": arxiv.SortCriterion.SubmittedDate,
+        "last_updated_date": arxiv.SortCriterion.LastUpdatedDate,
+    }
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         categories = os.environ.get("CATEGORIES", "cs.CV")
-        categories = categories.split(",")
-        # 保存目标分类列表，用于后续验证
-        self.target_categories = set(map(str.strip, categories))
-        self.start_urls = [
-            f"https://arxiv.org/list/{cat}/new" for cat in self.target_categories
-        ]  # 起始URL（计算机科学领域的最新论文）
+        parsed_categories = [c.strip() for c in categories.split(",") if c.strip()]
+        self.target_categories: List[str] = parsed_categories or ["cs.CV"]
 
-    name = "arxiv"  # 爬虫名称
-    allowed_domains = ["arxiv.org"]  # 允许爬取的域名
+        self.max_papers = max(1, int(os.environ.get("MAX_PAPERS", "10")))
+        sort_key = os.environ.get("SORT_BY", "popularity").strip().lower()
+        order_value = os.environ.get("SORT_ORDER", "desc").strip().lower()
+
+        self.sort_criterion = self.SORT_MAPPING.get(sort_key, arxiv.SortCriterion.Relevance)
+        self.sort_order = arxiv.SortOrder.Ascending if order_value == "asc" else arxiv.SortOrder.Descending
+
+        self.start_urls = [f"https://arxiv.org/list/{cat}/new" for cat in self.target_categories]
+
+        self.client = arxiv.Client()
+        self.seen_ids: Set[str] = set()
+        self.yielded = 0
 
     def parse(self, response):
-        # 提取每篇论文的信息
-        anchors = []
-        for li in response.css("div[id=dlpage] ul li"):
-            href = li.css("a::attr(href)").get()
-            if href and "item" in href:
-                anchors.append(int(href.split("item")[-1]))
+        if self.yielded >= self.max_papers:
+            return
 
-        # 遍历每篇论文的详细信息
-        for paper in response.css("dl dt"):
-            paper_anchor = paper.css("a[name^='item']::attr(name)").get()
-            if not paper_anchor:
-                continue
-                
-            paper_id = int(paper_anchor.split("item")[-1])
-            if anchors and paper_id >= anchors[-1]:
-                continue
+        category = self._extract_category_from_url(response.url)
+        if not category:
+            self.logger.warning("URL からカテゴリを解読できずスキップ: %s", response.url)
+            return
 
-            # 获取论文ID
-            abstract_link = paper.css("a[title='Abstract']::attr(href)").get()
-            if not abstract_link:
+        remaining = self.max_papers - self.yielded
+        for paper in self._fetch_ranked_papers(category, remaining):
+            arxiv_id = self._normalize_arxiv_id(paper.entry_id)
+            if arxiv_id in self.seen_ids:
                 continue
-                
-            arxiv_id = abstract_link.split("/")[-1]
-            
-            # 获取对应的论文描述部分 (dd元素)
-            paper_dd = paper.xpath("following-sibling::dd[1]")
-            if not paper_dd:
-                continue
-            
-            # 提取论文分类信息 - 在subjects部分
-            subjects_text = paper_dd.css(".list-subjects .primary-subject::text").get()
-            if not subjects_text:
-                # 如果找不到主分类，尝试其他方式获取分类
-                subjects_text = paper_dd.css(".list-subjects::text").get()
-            
-            if subjects_text:
-                # 解析分类信息，通常格式如 "Computer Vision and Pattern Recognition (cs.CV)"
-                # 提取括号中的分类代码
-                categories_in_paper = re.findall(r'\(([^)]+)\)', subjects_text)
-                
-                # 检查论文分类是否与目标分类有交集
-                paper_categories = set(categories_in_paper)
-                if paper_categories.intersection(self.target_categories):
-                    yield {
-                        "id": arxiv_id,
-                        "categories": list(paper_categories),  # 添加分类信息用于调试
-                    }
-                    self.logger.info(f"Found paper {arxiv_id} with categories {paper_categories}")
-                else:
-                    self.logger.debug(f"Skipped paper {arxiv_id} with categories {paper_categories} (not in target {self.target_categories})")
-            else:
-                # 如果无法获取分类信息，记录警告但仍然返回论文（保持向后兼容）
-                self.logger.warning(f"Could not extract categories for paper {arxiv_id}, including anyway")
-                yield {
-                    "id": arxiv_id,
-                    "categories": [],
-                }
+            self.seen_ids.add(arxiv_id)
+
+            yield {
+                "id": arxiv_id,
+                "categories": paper.categories,
+            }
+            self.yielded += 1
+
+            if self.yielded >= self.max_papers:
+                self.logger.info("指定件数 %s 件に到達したため取得を終了します", self.max_papers)
+                break
+
+    def _fetch_ranked_papers(self, category: str, limit: int) -> Iterable[arxiv.Result]:
+        search = arxiv.Search(
+            query=f"cat:{category}",
+            max_results=max(limit, self.max_papers),
+            sort_by=self.sort_criterion,
+            sort_order=self.sort_order,
+        )
+        try:
+            for result in self.client.results(search):
+                yield result
+        except Exception as exc:
+            self.logger.error("arXiv API 呼び出しに失敗しました (%s): %s", category, exc)
+            return
+
+    @staticmethod
+    def _extract_category_from_url(url: str) -> Optional[str]:
+        match = re.search(r"/list/([^/]+)/", url)
+        if match:
+            return match.group(1)
+        return None
+
+    @staticmethod
+    def _normalize_arxiv_id(entry_id: str) -> str:
+        arxiv_id = entry_id.split("/abs/")[-1]
+        return re.sub(r"v\d+$", "", arxiv_id)
