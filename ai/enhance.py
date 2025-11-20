@@ -19,8 +19,12 @@ from structure import Structure
 
 if os.path.exists(".env"):
     dotenv.load_dotenv()
-template = open("template.txt", "r").read()
-system = open("system.txt", "r").read()
+else:
+    dotenv.load_dotenv(dotenv.find_dotenv())
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+template = open(os.path.join(script_dir, "template.txt"), "r").read()
+system = open(os.path.join(script_dir, "system.txt"), "r").read()
 
 rate_lock = Lock()
 next_allowed_at = 0.0

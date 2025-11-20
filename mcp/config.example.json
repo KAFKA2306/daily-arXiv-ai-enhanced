@@ -1,0 +1,38 @@
+{
+  "//": "Claude Desktop / MCP 用のサンプル設定。必要に応じて ~/.config/Claude/claude_desktop_config.json 等にコピーしてください。",
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_TOKEN": "<GitHub の PAT（repo 権限以上）>"
+      }
+    },
+    "brave-search": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+      "env": {
+        "BRAVE_API_KEY": "<Brave Search の API キー>"
+      }
+    },
+    "fetch": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-fetch"]
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem"],
+      "env": {
+        "MCP_FS_ROOT": ".",
+        "MCP_FS_MODE": "writable"
+      }
+    },
+    "git": {
+      "command": "uvx",
+      "args": ["mcp-server-git"],
+      "env": {
+        "MCP_GIT_ROOT": "."
+      }
+    }
+  }
+}
