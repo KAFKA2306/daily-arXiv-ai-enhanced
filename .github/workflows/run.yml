@@ -46,7 +46,7 @@ jobs:
           # Set defaults if vars are not set
           echo "LANGUAGE=${{ vars.LANGUAGE || 'Japanese' }}" >> $GITHUB_ENV
           echo "CATEGORIES=${{ vars.CATEGORIES || 'cs.AI,cs.LG,cs.CL,cs.CV,stat.ML' }}" >> $GITHUB_ENV
-          echo "MODEL_NAME=${{ vars.MODEL_NAME || 'gemini-1.5-pro' }}" >> $GITHUB_ENV
+          echo "MODEL_NAME=${{ vars.MODEL_NAME || 'gemini-2.5-flash' }}" >> $GITHUB_ENV
           echo "MIN_INTERVAL_SECONDS=${{ vars.MIN_INTERVAL_SECONDS || '60' }}" >> $GITHUB_ENV
           
           # Debug output
@@ -114,7 +114,7 @@ jobs:
 
           # MODEL_NAME が未設定の際に備えてデフォルト値を提供
           if [ -z "$MODEL_NAME" ]; then
-            export MODEL_NAME="gemini-1.5-pro"
+            export MODEL_NAME="gemini-2.5-flash"
           fi
           if [ -z "$OPENAI_BASE_URL" ] && [[ "$MODEL_NAME" == gemini-* ]]; then
             export OPENAI_BASE_URL="https://generativelanguage.googleapis.com/v1beta/openai"
@@ -180,7 +180,7 @@ jobs:
           export MODEL_NAME="${{ env.MODEL_NAME }}"
           export MIN_INTERVAL_SECONDS="${{ env.MIN_INTERVAL_SECONDS }}"
           if [ -z "$MODEL_NAME" ]; then
-            export MODEL_NAME="gemini-1.5-pro"
+            export MODEL_NAME="gemini-2.5-flash"
           fi
           if [ -z "$OPENAI_BASE_URL" ] && [[ "$MODEL_NAME" == gemini-* ]]; then
             export OPENAI_BASE_URL="https://generativelanguage.googleapis.com/v1beta/openai"
