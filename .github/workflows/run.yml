@@ -41,20 +41,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Varsを確認
+      - name: Varsを確認・設定
         run: |
-          test -n "${{ vars.LANGUAGE }}"   || { echo "LANGUAGE is empty"; exit 1; }
-          test -n "${{ vars.CATEGORIES }}" || { echo "CATEGORIES is empty"; exit 1; }
-          test -n "${{ vars.MODEL_NAME }}" || { echo "MODEL_NAME is empty"; exit 1; }
-          test -n "${{ vars.MIN_INTERVAL_SECONDS }}" || { echo "MIN_INTERVAL_SECONDS is empty"; exit 1; }
-          echo "LANGUAGE=${{ vars.LANGUAGE }}"
-          echo "CATEGORIES=${{ vars.CATEGORIES }}"
-          echo "MODEL_NAME=${{ vars.MODEL_NAME }}"
-          echo "MIN_INTERVAL_SECONDS=${{ vars.MIN_INTERVAL_SECONDS }}"
+          # Set defaults if vars are not set
+          echo "LANGUAGE=${{ vars.LANGUAGE || 'Japanese' }}" >> $GITHUB_ENV
+          echo "CATEGORIES=${{ vars.CATEGORIES || 'cs.AI,cs.LG,cs.CL,cs.CV,stat.ML' }}" >> $GITHUB_ENV
+          echo "MODEL_NAME=${{ vars.MODEL_NAME || 'gemini-2.5-pro-preview' }}" >> $GITHUB_ENV
+          echo "MIN_INTERVAL_SECONDS=${{ vars.MIN_INTERVAL_SECONDS || '60' }}" >> $GITHUB_ENV
+          
+          # Debug output
+          echo "LANGUAGE=${{ vars.LANGUAGE || 'Japanese' }}"
+          echo "CATEGORIES=${{ vars.CATEGORIES || 'cs.AI,cs.LG,cs.CL,cs.CV,stat.ML' }}"
+          echo "MODEL_NAME=${{ vars.MODEL_NAME || 'gemini-2.5-pro-preview' }}"
+          echo "MIN_INTERVAL_SECONDS=${{ vars.MIN_INTERVAL_SECONDS || '60' }}"
 
       - name: 依存関係をインストール
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: 依存関係を同期
         run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
           uv sync
 
       - name: arXiv論文をクロール
@@ -80,9 +88,9 @@ jobs:
           cd daily_arxiv
           export OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
           export OPENAI_BASE_URL=${{ secrets.OPENAI_BASE_URL }}
-          export LANGUAGE="${{ vars.LANGUAGE }}"
-          export CATEGORIES="${{ vars.CATEGORIES }}"
-          export MODEL_NAME="${{ vars.MODEL_NAME }}"
+          export LANGUAGE="${{ env.LANGUAGE }}"
+          export CATEGORIES="${{ env.CATEGORIES }}"
+          export MODEL_NAME="${{ env.MODEL_NAME }}"
           if [ -n "${{ vars.MAX_PAPERS }}" ]; then
             export MAX_PAPERS="${{ vars.MAX_PAPERS }}"
             echo "MAX_PAPERS=$MAX_PAPERS"
@@ -168,9 +176,9 @@ jobs:
           cd ai
           export OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
           export OPENAI_BASE_URL=${{ secrets.OPENAI_BASE_URL }}
-          export LANGUAGE="${{ vars.LANGUAGE }}"
-          export MODEL_NAME="${{ vars.MODEL_NAME }}"
-          export MIN_INTERVAL_SECONDS="${{ vars.MIN_INTERVAL_SECONDS }}"
+          export LANGUAGE="${{ env.LANGUAGE }}"
+          export MODEL_NAME="${{ env.MODEL_NAME }}"
+          export MIN_INTERVAL_SECONDS="${{ env.MIN_INTERVAL_SECONDS }}"
           if [ -z "$MODEL_NAME" ]; then
             export MODEL_NAME="gemini-2.5-pro-preview"
           fi
@@ -192,7 +200,7 @@ jobs:
           today=${{ steps.crawl_step.outputs.crawl_date }}
           echo "Markdown 形式への変換を開始します..."
 
-          export LANGUAGE="${{ vars.LANGUAGE }}"
+          export LANGUAGE="${{ env.LANGUAGE }}"
           cd to_md
           AI_FILE="../data/${today}_AI_enhanced_${LANGUAGE}.jsonl"
 
@@ -277,8 +285,8 @@ jobs:
       - name: 変更をコミット
         if: steps.dedup_check.outputs.has_new_content == 'true'
         run: |
-          git config --global user.email "${{ vars.EMAIL }}"
-          git config --global user.name "${{ vars.NAME }}"
+          git config --global user.email "${{ vars.EMAIL || 'github-actions[bot]@users.noreply.github.com' }}"
+          git config --global user.name "${{ vars.NAME || 'github-actions[bot]' }}"
           git add .
           if git diff --staged --quiet; then
             echo "コミットすべき変更はありません"
