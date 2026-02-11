@@ -52,7 +52,7 @@ jobs:
           # Debug output
           echo "LANGUAGE=${{ vars.LANGUAGE || 'Japanese' }}"
           echo "CATEGORIES=${{ vars.CATEGORIES || 'cs.AI,cs.LG,cs.CL,cs.CV,stat.ML' }}"
-          echo "MODEL_NAME=${{ vars.MODEL_NAME || 'gemini-1.5-pro' }}"
+          echo "MODEL_NAME=${{ vars.MODEL_NAME || 'gemini-2.5-flash' }}"
           echo "MIN_INTERVAL_SECONDS=${{ vars.MIN_INTERVAL_SECONDS || '60' }}"
 
       - name: 依存関係をインストール

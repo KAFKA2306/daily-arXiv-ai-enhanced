@@ -1,0 +1,95 @@
+build	AI強化処理	﻿2025-11-22T09:40:04.7651930Z ##[group]Run source .venv/bin/activate
+build	AI強化処理	2025-11-22T09:40:04.7652257Z [36;1msource .venv/bin/activate[0m
+build	AI強化処理	2025-11-22T09:40:04.7652500Z [36;1mtoday=2025-11-22[0m
+build	AI強化処理	2025-11-22T09:40:04.7652707Z [36;1mecho "AI強化処理を開始します..."[0m
+build	AI強化処理	2025-11-22T09:40:04.7652923Z [36;1m[0m
+build	AI強化処理	2025-11-22T09:40:04.7653075Z [36;1mcd ai[0m
+build	AI強化処理	2025-11-22T09:40:04.7653474Z [36;1mexport OPENAI_API_KEY=***[0m
+build	AI強化処理	2025-11-22T09:40:04.7653723Z [36;1mexport OPENAI_BASE_URL=[0m
+build	AI強化処理	2025-11-22T09:40:04.7653953Z [36;1mexport LANGUAGE="Japanese"[0m
+build	AI強化処理	2025-11-22T09:40:04.7654214Z [36;1mexport MODEL_NAME="gemini-1.5-pro"[0m
+build	AI強化処理	2025-11-22T09:40:04.7654503Z [36;1mexport MIN_INTERVAL_SECONDS="60"[0m
+build	AI強化処理	2025-11-22T09:40:04.7654754Z [36;1mif [ -z "$MODEL_NAME" ]; then[0m
+build	AI強化処理	2025-11-22T09:40:04.7655240Z [36;1m  export MODEL_NAME="gemini-1.5-pro"[0m
+build	AI強化処理	2025-11-22T09:40:04.7655496Z [36;1mfi[0m
+build	AI強化処理	2025-11-22T09:40:04.7655746Z [36;1mif [ -z "$OPENAI_BASE_URL" ] && [[ "$MODEL_NAME" == gemini-* ]]; then[0m
+build	AI強化処理	2025-11-22T09:40:04.7656243Z [36;1m  export OPENAI_BASE_URL="https://generativelanguage.googleapis.com/v1beta/openai"[0m
+build	AI強化処理	2025-11-22T09:40:04.7656648Z [36;1mfi[0m
+build	AI強化処理	2025-11-22T09:40:04.7656802Z [36;1m[0m
+build	AI強化処理	2025-11-22T09:40:04.7657124Z [36;1mpython enhance.py --data ../data/${today}.jsonl --min-interval-secs "$MIN_INTERVAL_SECONDS"[0m
+build	AI強化処理	2025-11-22T09:40:04.7657523Z [36;1mif [ $? -ne 0 ]; then[0m
+build	AI強化処理	2025-11-22T09:40:04.7657738Z [36;1m    echo "AI処理に失敗しました"[0m
+build	AI強化処理	2025-11-22T09:40:04.7657939Z [36;1m    exit 1[0m
+build	AI強化処理	2025-11-22T09:40:04.7658111Z [36;1mfi[0m
+build	AI強化処理	2025-11-22T09:40:04.7658274Z [36;1mecho "AI強化処理が完了しました"[0m
+build	AI強化処理	2025-11-22T09:40:04.7690575Z shell: /usr/bin/bash -e {0}
+build	AI強化処理	2025-11-22T09:40:04.7690804Z env:
+build	AI強化処理	2025-11-22T09:40:04.7690969Z   LANGUAGE: Japanese
+build	AI強化処理	2025-11-22T09:40:04.7691280Z   CATEGORIES: cs.AI,cs.LG,cs.CL,cs.CV,stat.ML,cs.IR,cs.HC,cs.SE,q-fin.ST
+build	AI強化処理	2025-11-22T09:40:04.7691633Z   MODEL_NAME: gemini-1.5-pro
+build	AI強化処理	2025-11-22T09:40:04.7691855Z   MIN_INTERVAL_SECONDS: 60
+build	AI強化処理	2025-11-22T09:40:04.7692103Z   UV_CACHE_DIR: /home/runner/work/_temp/setup-uv-cache
+build	AI強化処理	2025-11-22T09:40:04.7692381Z ##[endgroup]
+build	AI強化処理	2025-11-22T09:40:04.7771893Z AI強化処理を開始します...
+build	AI強化処理	2025-11-22T09:40:06.1989763Z Open: ../data/2025-11-22.jsonl
+build	AI強化処理	2025-11-22T09:40:06.6573237Z Connect to: gemini-1.5-pro
+build	AI強化処理	2025-11-22T09:40:06.6667909Z 
+build	AI強化処理	2025-11-22T09:40:07.8164353Z Processing items:   0%|          | 0/10 [00:00<?, ?it/s]
+build	AI強化処理	2025-11-22T09:40:07.8164776Z Processing items:   0%|          | 0/10 [00:01<?, ?it/s]
+build	AI強化処理	2025-11-22T09:48:07.5537906Z Traceback (most recent call last):
+build	AI強化処理	2025-11-22T09:48:07.5547550Z   File "/home/runner/work/daily-arXiv-ai-enhanced/daily-arXiv-ai-enhanced/ai/enhance.py", line 142, in <module>
+build	AI強化処理	2025-11-22T09:48:07.5548105Z     main()
+build	AI強化処理	2025-11-22T09:48:07.5548635Z   File "/home/runner/work/daily-arXiv-ai-enhanced/daily-arXiv-ai-enhanced/ai/enhance.py", line 133, in main
+build	AI強化処理	2025-11-22T09:48:07.5549512Z     processed_data = process_all_items(data, model_name, language, args.max_workers, args.min_interval_secs)
+build	AI強化処理	2025-11-22T09:48:07.5550299Z                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+build	AI強化処理	2025-11-22T09:48:07.5551470Z   File "/home/runner/work/daily-arXiv-ai-enhanced/daily-arXiv-ai-enhanced/ai/enhance.py", line 103, in process_all_items
+build	AI強化処理	2025-11-22T09:48:07.5551997Z     processed_data[idx] = future.result()
+build	AI強化処理	2025-11-22T09:48:07.5552238Z                           ^^^^^^^^^^^^^^^
+build	AI強化処理	2025-11-22T09:48:07.5552598Z   File "/usr/lib/python3.12/concurrent/futures/_base.py", line 449, in result
+build	AI強化処理	2025-11-22T09:48:07.5552946Z     return self.__get_result()
+build	AI強化処理	2025-11-22T09:48:07.5553157Z            ^^^^^^^^^^^^^^^^^^^
+build	AI強化処理	2025-11-22T09:48:07.5553510Z   File "/usr/lib/python3.12/concurrent/futures/_base.py", line 401, in __get_result
+build	AI強化処理	2025-11-22T09:48:07.5553872Z     raise self._exception
+build	AI強化処理	2025-11-22T09:48:07.5554214Z   File "/usr/lib/python3.12/concurrent/futures/thread.py", line 58, in run
+build	AI強化処理	2025-11-22T09:48:07.5554672Z     result = self.fn(*self.args, **self.kwargs)
+build	AI強化処理	2025-11-22T09:48:07.5555283Z              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+build	AI強化処理	2025-11-22T09:48:07.5555871Z   File "/home/runner/work/daily-arXiv-ai-enhanced/daily-arXiv-ai-enhanced/ai/enhance.py", line 73, in process_single_item
+build	AI強化処理	2025-11-22T09:48:07.5556770Z     response: Structure = chain.invoke({"language": language, "content": item["summary"]})
+build	AI強化処理	2025-11-22T09:48:07.5557149Z                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+build	AI強化処理	2025-11-22T09:48:07.5557820Z   File "/home/runner/work/daily-arXiv-ai-enhanced/daily-arXiv-ai-enhanced/.venv/lib/python3.12/site-packages/langchain_core/runnables/base.py", line 3129, in invoke
+build	AI強化処理	2025-11-22T09:48:07.5558495Z     input_ = context.run(step.invoke, input_, config)
+build	AI強化処理	2025-11-22T09:48:07.5558761Z              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+build	AI強化処理	2025-11-22T09:48:07.5559417Z   File "/home/runner/work/daily-arXiv-ai-enhanced/daily-arXiv-ai-enhanced/.venv/lib/python3.12/site-packages/langchain_core/runnables/base.py", line 5534, in invoke
+build	AI強化処理	2025-11-22T09:48:07.5561520Z     return self.bound.invoke(
+build	AI強化処理	2025-11-22T09:48:07.5561840Z            ^^^^^^^^^^^^^^^^^^
+build	AI強化処理	2025-11-22T09:48:07.5562877Z   File "/home/runner/work/daily-arXiv-ai-enhanced/daily-arXiv-ai-enhanced/.venv/lib/python3.12/site-packages/langchain_core/language_models/chat_models.py", line 385, in invoke
+build	AI強化処理	2025-11-22T09:48:07.5563782Z     self.generate_prompt(
+build	AI強化処理	2025-11-22T09:48:07.5564887Z   File "/home/runner/work/daily-arXiv-ai-enhanced/daily-arXiv-ai-enhanced/.venv/lib/python3.12/site-packages/langchain_core/language_models/chat_models.py", line 1104, in generate_prompt
+build	AI強化処理	2025-11-22T09:48:07.5565952Z     return self.generate(prompt_messages, stop=stop, callbacks=callbacks, **kwargs)
+build	AI強化処理	2025-11-22T09:48:07.5566329Z            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+build	AI強化処理	2025-11-22T09:48:07.5567217Z   File "/home/runner/work/daily-arXiv-ai-enhanced/daily-arXiv-ai-enhanced/.venv/lib/python3.12/site-packages/langchain_core/language_models/chat_models.py", line 914, in generate
+build	AI強化処理	2025-11-22T09:48:07.5567984Z     self._generate_with_cache(
+build	AI強化処理	2025-11-22T09:48:07.5568715Z   File "/home/runner/work/daily-arXiv-ai-enhanced/daily-arXiv-ai-enhanced/.venv/lib/python3.12/site-packages/langchain_core/language_models/chat_models.py", line 1208, in _generate_with_cache
+build	AI強化処理	2025-11-22T09:48:07.5569757Z     result = self._generate(
+build	AI強化処理	2025-11-22T09:48:07.5570175Z              ^^^^^^^^^^^^^^^
+build	AI強化処理	2025-11-22T09:48:07.5571441Z   File "/home/runner/work/daily-arXiv-ai-enhanced/daily-arXiv-ai-enhanced/.venv/lib/python3.12/site-packages/langchain_openai/chat_models/base.py", line 1333, in _generate
+build	AI強化処理	2025-11-22T09:48:07.5572832Z     raise e
+build	AI強化処理	2025-11-22T09:48:07.5574121Z   File "/home/runner/work/daily-arXiv-ai-enhanced/daily-arXiv-ai-enhanced/.venv/lib/python3.12/site-packages/langchain_openai/chat_models/base.py", line 1328, in _generate
+build	AI強化処理	2025-11-22T09:48:07.5575777Z     raw_response = self.client.with_raw_response.create(**payload)
+build	AI強化処理	2025-11-22T09:48:07.5576356Z                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+build	AI強化処理	2025-11-22T09:48:07.5577600Z   File "/home/runner/work/daily-arXiv-ai-enhanced/daily-arXiv-ai-enhanced/.venv/lib/python3.12/site-packages/openai/_legacy_response.py", line 364, in wrapped
+build	AI強化処理	2025-11-22T09:48:07.5579173Z     return cast(LegacyAPIResponse[R], func(*args, **kwargs))
+build	AI強化処理	2025-11-22T09:48:07.5579713Z                                       ^^^^^^^^^^^^^^^^^^^^^
+build	AI強化処理	2025-11-22T09:48:07.5580913Z   File "/home/runner/work/daily-arXiv-ai-enhanced/daily-arXiv-ai-enhanced/.venv/lib/python3.12/site-packages/openai/_utils/_utils.py", line 286, in wrapper
+build	AI強化処理	2025-11-22T09:48:07.5582056Z     return func(*args, **kwargs)
+build	AI強化処理	2025-11-22T09:48:07.5582421Z            ^^^^^^^^^^^^^^^^^^^^^
+build	AI強化処理	2025-11-22T09:48:07.5583733Z   File "/home/runner/work/daily-arXiv-ai-enhanced/daily-arXiv-ai-enhanced/.venv/lib/python3.12/site-packages/openai/resources/chat/completions/completions.py", line 1189, in create
+build	AI強化処理	2025-11-22T09:48:07.5585279Z     return self._post(
+build	AI強化処理	2025-11-22T09:48:07.5585606Z            ^^^^^^^^^^^
+build	AI強化処理	2025-11-22T09:48:07.5586646Z   File "/home/runner/work/daily-arXiv-ai-enhanced/daily-arXiv-ai-enhanced/.venv/lib/python3.12/site-packages/openai/_base_client.py", line 1259, in post
+build	AI強化処理	2025-11-22T09:48:07.5588293Z     return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+build	AI強化処理	2025-11-22T09:48:07.5589018Z                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+build	AI強化処理	2025-11-22T09:48:07.5590096Z   File "/home/runner/work/daily-arXiv-ai-enhanced/daily-arXiv-ai-enhanced/.venv/lib/python3.12/site-packages/openai/_base_client.py", line 1047, in request
+build	AI強化処理	2025-11-22T09:48:07.5591293Z     raise self._make_status_error_from_response(err.response) from None
+build	AI強化処理	2025-11-22T09:48:07.5592906Z openai.NotFoundError: Error code: 404 - [{'error': {'code': 404, 'message': 'models/gemini-1.5-pro is not found for API version v1main, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.', 'status': 'NOT_FOUND'}}]
+build	AI強化処理	2025-11-22T09:48:07.6781939Z ##[error]Process completed with exit code 1.
