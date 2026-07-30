@@ -1,0 +1,78 @@
+project:
+  id: kafka:daily-arxiv-ai-enhanced
+  name: Daily arXiv AI Enhanced
+  repository: https://github.com/KAFKA2306/daily-arXiv-ai-enhanced
+  pages: https://kafka2306.github.io/daily-arXiv-ai-enhanced/
+  version: 0.1.0
+  updated: 2026-07-30
+  core_ontology: https://raw.githubusercontent.com/KAFKA2306/know/main/ontology/causal-evidence-core.yaml
+  schema: https://raw.githubusercontent.com/KAFKA2306/know/main/ontology/project.schema.json
+
+purpose:
+  problem: Acquire current arXiv records, generate Japanese AI summaries, and publish them without confusing source metadata with model-generated interpretation.
+  intended_decisions: [publish, skip_duplicate, retry, quarantine, reject]
+  success_conditions:
+    - Each paper retains its arXiv identifier, version, title, authors, dates, categories, and source URL.
+    - Source abstracts and AI-generated summaries remain distinct semantic objects.
+    - Published pages can be traced to the exact input record, prompt or policy, model, and workflow run.
+  falsification_conditions:
+    - An AI summary is represented as the paper authors' statement.
+    - Duplicate or failed records are silently published.
+    - A published artifact lacks source identity or generation provenance.
+
+scope:
+  included: [arXiv records, source abstracts, category queries, AI summaries, publication artifacts, workflow logs]
+  excluded: [peer-review judgments, reproduced paper PDFs, unsupported scientific conclusions]
+  temporal: Submission, revision, acquisition, generation, and publication times are explicit.
+  abstraction_level: Automated scholarly-record acquisition and derivative-summary publication.
+
+competency_questions:
+  - Which arXiv record and version is being summarized?
+  - Which text is source-authored and which text is AI-generated?
+  - Which model, configuration, and workflow run produced the summary?
+  - Was the record new, duplicated, failed, quarantined, or published?
+  - Can the public page be reproduced from retained inputs and configuration?
+
+domain_mapping:
+  System: ScholarlySummaryPublicationPipeline
+  State: [query state, paper record state, generation state, publication state]
+  Action: [query arXiv, acquire record, deduplicate, summarize, convert, publish, quarantine]
+  Process: [crawl, normalize, deduplicate, LLM generation, Markdown conversion, Pages deployment]
+  Observation: [arXiv metadata, source abstract, API response, workflow status, deployed page]
+  Model: [LLM summarizer, category filter, deduplication policy]
+  Requirement: [source attribution, source-generated separation, version traceability, duplicate control, reproducibility]
+  Claim: [paper metadata, summary content, novelty of record, publication completeness]
+  Evidence: [arXiv URL, raw JSONL, model configuration, generated Markdown, workflow log, commit hash]
+  Decision: [publish, skip_duplicate, retry, quarantine, reject]
+
+claims_and_evidence:
+  assertion_types: [ReportedFact, SourceText, AIGeneratedSummary, CalculatedValue, Assumption, DecisionAssertion]
+  required_evidence:
+    ReportedFact: [arXiv identifier, version, source URL, acquisition time]
+    SourceText: [source record field, record hash]
+    AIGeneratedSummary: [input record ID, model name, generation policy, output artifact]
+    DecisionAssertion: [workflow status, reason, run ID]
+  unknown_policy: Missing source identity, record version, or generation provenance blocks publication and records UNKNOWN or quarantine.
+
+decision_rules:
+  - id: publish-record
+    when: Source identity, version, deduplication result, generated artifact, and validation are present.
+    result: publish
+  - id: duplicate-record
+    when: The same source record and version already exist.
+    result: skip_duplicate
+  - id: generation-or-source-failure
+    when: Acquisition, parsing, generation, or provenance validation fails.
+    result: quarantine
+
+provenance:
+  sources: [arXiv API and record pages]
+  generated_artifacts: [JSONL records, Japanese summaries, Markdown pages, file indexes, deployment artifacts]
+  agents: [crawler, deduplication script, LLM, converter, GitHub Actions]
+  lineage: Each summary links to exact arXiv record version, source snapshot, model configuration, workflow run, and commit.
+
+validation:
+  structural: Validate identifiers, dates, categories, source URLs, output paths, and required provenance.
+  semantic: Separate author metadata and abstracts from AI summaries and later interpretation.
+  evidence: Verify record hashes, generation configuration, deduplication decisions, and workflow logs.
+  publication: Build and deployment must preserve links to the original arXiv record and label AI-generated content.
