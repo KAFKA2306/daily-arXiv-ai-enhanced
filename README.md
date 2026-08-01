@@ -1,60 +1,74 @@
-# Daily arXiv AI Enhanced
+# Daily arXiv AI Enhanced — arXiv論文の日本語要約パイプライン
 
-arXivの公開レコードを定期取得し、設定されたLLMで日本語要約を生成してGitHub Pagesへ公開する自動パイプラインです。
+**公開サイト:** https://kafka2306.github.io/daily-arXiv-ai-enhanced/
 
-- 公開サイト: https://kafka2306.github.io/daily-arXiv-ai-enhanced/
+arXivの公開レコードを定期取得し、設定したLLMで日本語要約を生成して、GitHub Pagesへ公開する自動パイプラインです。
 
-## 因果・証拠オントロジー
+原論文の情報とAI生成文を混同せず、論文ID、版、著者、日付、カテゴリ、出典URL、使用モデル、生成設定を追跡できる状態で保存します。
 
-上位システムは `ScholarlySummaryPublicationPipeline` です。
+## できること
+
+- 指定したarXivカテゴリの新着レコードを取得
+- 論文タイトル、著者、抄録、版、日付、URLを保存
+- LLMによる日本語要約を生成
+- 同一論文・同一版の重複を検出
+- JSONL、Markdown、静的Webページを生成
+- キーワード・著者フィルターをブラウザへ保存
+- 取得や生成に失敗した日の公開を抑止
+
+## 処理の流れ
 
 ```text
-arXiv公開レコード
-→ 論文ID・版・著者・日付・カテゴリの保持
-→ 重複判定
-→ LLM要約生成
-→ SourceText / AIGeneratedSummary の分離
-→ Markdown変換
-→ 検証
-→ Pages公開
+arXiv公開レコードを取得
+  → 論文ID・版・著者・日付・カテゴリを検証
+  → 既存データとの重複を確認
+  → LLMへ要約を依頼
+  → 原文とAI要約を別フィールドへ保存
+  → Markdown・静的ページを生成
+  → 内容とリンクを検証
+  → GitHub Pagesへ公開
 ```
 
-原論文のタイトル、著者、抄録、カテゴリなどの出典情報と、AIが生成した要約・評価を別クラスとして保存します。AI要約を著者の主張として扱いません。arXiv ID、版、出典URL、入力レコード、モデル、生成設定、ワークフロー実行が欠ける成果物は `quarantine` とし、公開しません。
+次の情報が欠ける成果物は`quarantine`として公開しません。
+
+- arXiv IDと版
+- 原論文URL
+- 入力レコード
+- 使用モデル
+- 生成設定
+- 実行ワークフローの記録
+
+機械可読な定義:
 
 - [プロジェクト・オントロジー](ontology/project.yaml)
 - [共通因果・証拠オントロジー](https://github.com/KAFKA2306/know/blob/main/ontology/causal-evidence-core.yaml)
 
-## 主な機能
-
-- GitHub ActionsとPagesによるサーバーレス運用
-- arXivカテゴリを指定した公開レコード取得
-- 設定可能なLLMによる日本語要約
-- 重複検査と失敗時の公開抑止
-- JSONL、Markdown、静的ページの生成
-- キーワード・著者フィルタをブラウザの`localStorage`へ保存
-
-## GitHub Actions設定
+## GitHub Actionsの設定
 
 `Settings > Secrets and variables > Actions`で設定します。
 
 ### Secrets
 
-- `OPENAI_API_KEY`: 利用するOpenAI互換APIのキー
-- `OPENAI_BASE_URL`: 利用先が既定値と異なる場合
-- `ACCESS_PASSWORD`: 任意のサイト保護用パスワード
+| 名前 | 内容 |
+| --- | --- |
+| `OPENAI_API_KEY` | 使用するOpenAI互換APIのキー |
+| `OPENAI_BASE_URL` | 既定以外のAPIを使う場合のURL |
+| `ACCESS_PASSWORD` | 任意のサイト保護用パスワード |
 
 ### Variables
 
-- `CATEGORIES`: 例 `cs.AI, cs.CL`
-- `LANGUAGE`: 既定 `Japanese`
-- `MODEL_NAME`: 使用するモデル名
-- `MIN_INTERVAL_SECONDS`: LLM呼出しの最小間隔
-- `MAX_PAPERS`: 1回に取得する上限
-- `SORT_BY`: `relevance`、`submitted_date`、`last_updated_date`など実装が受け付ける値
-- `SORT_ORDER`: `desc` または `asc`
-- `EMAIL` / `NAME`: CIコミット用Git識別情報
+| 名前 | 例・内容 |
+| --- | --- |
+| `CATEGORIES` | `cs.AI, cs.CL` |
+| `LANGUAGE` | 既定は`Japanese` |
+| `MODEL_NAME` | 使用モデル名 |
+| `MIN_INTERVAL_SECONDS` | LLM呼び出し間隔 |
+| `MAX_PAPERS` | 1回の取得上限 |
+| `SORT_BY` | `relevance`、`submitted_date`など |
+| `SORT_ORDER` | `desc`または`asc` |
+| `EMAIL` / `NAME` | CIコミット用のGit識別情報 |
 
-ワークフローは、取得、重複検査、要約、Markdown変換、成果物生成、Pagesデプロイを順に実行します。新規レコードがない場合や処理エラーの場合は、後続の生成・公開をスキップします。
+APIキー、パスワード、`.env`はコミットしません。
 
 ## ローカル実行
 
@@ -89,20 +103,21 @@ SORT_ORDER=desc
 ACCESS_PASSWORD=<optional>
 ```
 
-`.env`、APIキー、パスワードはコミットしません。
+## 公開前の確認
 
-## 設定変更時の検証
+1. arXiv ID、版、日付、原論文URLが保存されている
+2. 重複検査が成功している
+3. AI要約が原文とは別に保存されている
+4. 生成ページから原論文へ移動できる
+5. 使用モデルと生成設定が追跡できる
+6. Actions実行結果と公開内容が一致する
 
-1. 同じ設定でローカル取得を実行する。
-2. JSONLにarXiv ID、版、日付、出典URLが保持されていることを確認する。
-3. 重複検査の終了状態を確認する。
-4. AI要約が原文フィールドと別に保存されていることを確認する。
-5. 生成Markdownから原論文へ到達できることを確認する。
-6. Actions実行後、公開ページと生成コミットを照合する。
+## 注意
 
-## 公開上の境界
+- AI要約は原論文の代替ではありません
+- AI要約は著者自身の文章・見解ではありません
+- arXiv掲載は査読済み、再現済み、正しいことを意味しません
+- 技術的評価を加える場合は、その根拠と評価方法を別に記録します
+- 原論文とarXivの利用条件に従い、本文を必要以上に複製しません
 
-- AI要約は原論文の代替ではありません。
-- 査読済みであること、再現性、技術的妥当性を自動的に保証しません。
-- 科学的評価を追加する場合は、その評価のモデル、手順、根拠、限界を別の主張として記録します。
-- 原論文の利用条件とarXivの規約を確認し、必要以上の本文複製を行いません。
+**README最終監査:** 2026-08-01
