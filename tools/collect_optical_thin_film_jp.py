@@ -16,13 +16,18 @@ OUTPUT_JSONL = OUTPUT_DIR / "jp_literature.jsonl"
 OUTPUT_MANIFEST = OUTPUT_DIR / "jp_manifest.json"
 SEARCH_URL = "https://ndlsearch.ndl.go.jp/api/opensearch"
 
+# OpenSearchのanyは、半角スペース区切りで複数語のAND検索になる。
+# 個々の検索式を狭くしすぎず、取得後にmatched_queriesで由来を保持する。
 QUERIES: dict[str, str] = {
-    "inverse_design": "多層薄膜 光学 逆設計",
-    "reflection_joint_estimation": "反射スペクトル 膜厚 光学定数 推定",
-    "optical_constants_ml": "分光反射率 屈折率 消衰係数 機械学習",
-    "tmm_optimization": "薄膜 転送行列法 最適化",
-    "ellipsometry_deep_learning": "エリプソメトリ 深層学習 膜厚",
-    "in_process_reflectometry": "成膜 インプロセス 反射率 時系列 推定",
+    "multilayer_thin_film": "多層薄膜",
+    "optical_thin_film": "光学薄膜",
+    "inverse_design": "薄膜 逆設計",
+    "reflection_thickness": "反射スペクトル 膜厚",
+    "optical_constants_thickness": "光学定数 膜厚",
+    "spectral_reflectance": "分光反射率 薄膜",
+    "transfer_matrix": "転送行列法 薄膜",
+    "ellipsometry": "エリプソメトリ 膜厚",
+    "in_process_reflectometry": "インプロセス 反射率",
 }
 
 
@@ -36,8 +41,9 @@ def child_texts(item: ET.Element) -> dict[str, list[str]]:
         if child is item:
             continue
         text = " ".join("".join(child.itertext()).split())
-        if text and text not in values[local_name(child.tag)]:
-            values[local_name(child.tag)].append(text)
+        name = local_name(child.tag)
+        if text and text not in values[name]:
+            values[name].append(text)
     return dict(values)
 
 
@@ -54,7 +60,6 @@ def fetch_query(session: requests.Session, query: str) -> tuple[int, list[dict[s
         SEARCH_URL,
         params={
             "any": query,
-            "mediatype": "2",
             "cnt": 500,
             "idx": 1,
         },
@@ -66,9 +71,7 @@ def fetch_query(session: requests.Session, query: str) -> tuple[int, list[dict[s
         )
 
     root = ET.fromstring(response.content)
-    channel = root.find("channel")
-    if channel is None:
-        channel = root.find(".//channel")
+    channel = next((element for element in root.iter() if local_name(element.tag) == "channel"), None)
     if channel is None:
         raise RuntimeError("NDL Search API response does not contain channel")
 
@@ -79,13 +82,15 @@ def fetch_query(session: requests.Session, query: str) -> tuple[int, list[dict[s
             break
 
     records: list[dict[str, Any]] = []
-    for item in channel.findall("item"):
+    items = [element for element in channel if local_name(element.tag) == "item"]
+    for item in items:
         values = child_texts(item)
         link = first(values, "link")
         guid = first(values, "guid", "identifier")
+        record_key = link or guid or first(values, "title")
         records.append(
             {
-                "record_key": link or guid or first(values, "title"),
+                "record_key": record_key,
                 "title": first(values, "title"),
                 "link": link,
                 "identifier": guid,
@@ -95,6 +100,7 @@ def fetch_query(session: requests.Session, query: str) -> tuple[int, list[dict[s
                 "publication_date": first(values, "issued", "date", "pubDate"),
                 "descriptions": values.get("description", []),
                 "subjects": values.get("subject", []),
+                "types": values.get("type", []),
                 "raw_metadata": values,
                 "source": "国立国会図書館サーチ OpenSearch API",
             }
