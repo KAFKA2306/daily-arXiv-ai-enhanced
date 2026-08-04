@@ -111,8 +111,8 @@ def fetch_window(
         "idx": 1,
     }
     if start_year is not None and end_year is not None:
-        params["from"] = str(start_year)
-        params["until"] = str(end_year)
+        params["from"] = f"{start_year:04d}-01-01"
+        params["until"] = f"{end_year:04d}-12-31"
 
     response = session.get(SEARCH_URL, params=params, timeout=90)
     if response.status_code != 200:
