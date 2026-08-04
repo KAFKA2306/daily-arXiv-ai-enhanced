@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 import time
@@ -99,6 +100,8 @@ def parse_sru_response(content: bytes) -> tuple[int, list[dict[str, Any]]]:
             continue
 
         metadata = parse_record_data(record_data)
+        metadata_bytes = ET.tostring(metadata, encoding="utf-8")
+        metadata_sha256 = hashlib.sha256(metadata_bytes).hexdigest()
         record_identifiers = [
             " ".join("".join(node.itertext()).split())
             for node in record
@@ -114,18 +117,7 @@ def parse_sru_response(content: bytes) -> tuple[int, list[dict[str, Any]]]:
         types = values_by_local_name(metadata, "type")
         languages = values_by_local_name(metadata, "language")
 
-        record_key = (
-            first(record_identifiers)
-            or first(identifiers)
-            or " | ".join(
-                part
-                for part in [first(titles), first(creators), first(dates)]
-                if part
-            )
-        )
-        if not record_key:
-            continue
-
+        record_key = first(record_identifiers) or f"sha256:{metadata_sha256}"
         link = next(
             (value for value in identifiers if value.startswith(("http://", "https://"))),
             None,
@@ -133,6 +125,8 @@ def parse_sru_response(content: bytes) -> tuple[int, list[dict[str, Any]]]:
         records.append(
             {
                 "record_key": record_key,
+                "record_identifier": first(record_identifiers),
+                "metadata_sha256": metadata_sha256,
                 "title": first(titles),
                 "link": link,
                 "identifiers": identifiers,
@@ -319,7 +313,7 @@ def main() -> int:
         "query_total_results": total_counts,
         "query_unique_results": unique_counts,
         "record_count_after_record_key_deduplication": len(records),
-        "deduplication_key": "sru_record_identifier_or_metadata_fingerprint",
+        "deduplication_key": "sru_record_identifier_else_metadata_xml_sha256",
         "incomplete_queries": incomplete_queries,
         "incomplete_ranges": incomplete_ranges,
         "queries": QUERIES,
