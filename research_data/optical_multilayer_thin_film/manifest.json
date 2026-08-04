@@ -1,0 +1,27 @@
+{
+  "collected_at": "2026-08-04T22:37:31.337637+00:00",
+  "collector": "tools/collect_optical_thin_film_arxiv.py",
+  "dataset": "optical-multilayer-thin-film-arxiv",
+  "deduplication_key": "arxiv_id_without_version_suffix",
+  "language": "ja",
+  "paper_count_after_arxiv_id_deduplication": 52,
+  "queries": {
+    "differentiable_tmm": "(all:\"transfer matrix method\" OR all:TMM) AND (all:differentiable OR all:\"automatic differentiation\") AND (all:\"thin film\" OR all:\"optical multilayer\")",
+    "ellipsometry": "all:ellipsometry AND (all:\"inverse problem\" OR all:reconstruction) AND (all:\"deep learning\" OR all:transformer OR all:\"flow matching\")",
+    "generative_model": "all:\"optical multilayer\" AND (all:\"diffusion model\" OR all:\"flow matching\" OR all:autoregressive)",
+    "inverse_design": "all:\"multilayer thin film\" AND all:\"inverse design\"",
+    "reflectometry": "all:reflectometry AND (all:\"refractive index\" OR all:\"optical constants\" OR all:thickness) AND (all:optical OR all:\"thin film\")",
+    "tandem_network": "all:\"thin film\" AND (all:\"tandem neural network\" OR all:\"forward model\") AND (all:optical OR all:spectrum)"
+  },
+  "query_count": 6,
+  "query_result_counts_before_deduplication": {
+    "differentiable_tmm": 1,
+    "ellipsometry": 2,
+    "generative_model": 1,
+    "inverse_design": 8,
+    "reflectometry": 40,
+    "tandem_network": 3
+  },
+  "source": "https://export.arxiv.org/api/query",
+  "status": "complete"
+}
