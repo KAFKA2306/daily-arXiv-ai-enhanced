@@ -17,7 +17,7 @@ permissions:
 
 concurrency:
   group: optical-multilayer-thin-film-collection
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   collect:
@@ -90,7 +90,7 @@ jobs:
                   raise SystemExit(f"成果物が生成されていません: {manifest_path}")
 
               manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-              if not str(manifest.get("status", "")).startswith("complete"):
+              if manifest.get("status") != "complete":
                   raise SystemExit(f"収集状態がcompleteではありません: {manifest_path}")
 
               rows = [
