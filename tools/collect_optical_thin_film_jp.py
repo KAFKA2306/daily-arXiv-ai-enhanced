@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import sys
 import time
 import xml.etree.ElementTree as ET
@@ -108,6 +109,16 @@ def parse_sru_response(content: bytes) -> tuple[int, list[dict[str, Any]]]:
             for node in record
             if local_name(node.tag) == "recordIdentifier"
         ]
+        position_text = first(
+            [
+                " ".join("".join(node.itertext()).split())
+                for node in record
+                if local_name(node.tag) == "recordPosition"
+            ]
+        )
+        if not position_text:
+            continue
+
         identifiers = values_by_local_name(metadata, "identifier")
         titles = values_by_local_name(metadata, "title")
         creators = values_by_local_name(metadata, "creator")
@@ -124,6 +135,7 @@ def parse_sru_response(content: bytes) -> tuple[int, list[dict[str, Any]]]:
 
         records.append(
             {
+                "record_position": int(position_text),
                 "record_key": f"sha256:{metadata_sha256}",
                 "record_identifier": first(record_identifiers),
                 "metadata_sha256": metadata_sha256,
@@ -176,28 +188,49 @@ def fetch_window(
     return parse_sru_response(response.content)
 
 
+def annotate_partition(
+    records: list[dict[str, Any]],
+    partition_id: str,
+) -> list[dict[str, Any]]:
+    annotated: list[dict[str, Any]] = []
+    for record in records:
+        item = dict(record)
+        item["partition_id"] = partition_id
+        annotated.append(item)
+    return annotated
+
+
 def collect_range(
     session: requests.Session,
     query: str,
     start_year: int,
     end_year: int,
-) -> tuple[dict[str, dict[str, Any]], list[tuple[int, int, int]]]:
+) -> tuple[list[dict[str, Any]], list[tuple[int, int, int]]]:
     total, records = fetch_window(session, query, start_year, end_year)
-    print(f"[期間取得] {start_year}-{end_year}: {len(records)}/{total}件", flush=True)
+    partition_id = f"year:{start_year}-{end_year}"
+    print(f"[期間取得] {partition_id}: {len(records)}/{total}件", flush=True)
     time.sleep(0.5)
 
-    records_by_key = {record["record_key"]: record for record in records}
     if total <= PAGE_SIZE:
-        return records_by_key, []
+        return annotate_partition(records, partition_id), []
 
     if start_year >= end_year:
-        return records_by_key, [(start_year, end_year, total)]
+        return annotate_partition(records, partition_id), [(start_year, end_year, total)]
 
     midpoint = (start_year + end_year) // 2
     left_records, left_incomplete = collect_range(session, query, start_year, midpoint)
     right_records, right_incomplete = collect_range(session, query, midpoint + 1, end_year)
-    left_records.update(right_records)
-    return left_records, left_incomplete + right_incomplete
+    return left_records + right_records, left_incomplete + right_incomplete
+
+
+def has_partitioned_year(value: str | None) -> bool:
+    if not value:
+        return False
+    for match in re.findall(r"(?<!\d)(\d{4})(?!\d)", value):
+        year = int(match)
+        if 1800 <= year <= CURRENT_YEAR + 1:
+            return True
+    return False
 
 
 def fetch_query(
@@ -205,10 +238,10 @@ def fetch_query(
     query: str,
 ) -> tuple[int, list[dict[str, Any]], list[tuple[int, int, int]]]:
     total, first_records = fetch_window(session, query)
-    records_by_key = {record["record_key"]: record for record in first_records}
     if total <= PAGE_SIZE:
-        return total, list(records_by_key.values()), []
+        return total, annotate_partition(first_records, "global"), []
 
+    dated_records: list[dict[str, Any]] = []
     incomplete_ranges: list[tuple[int, int, int]] = []
     for start_year, end_year in INITIAL_YEAR_RANGES:
         range_records, range_incomplete = collect_range(
@@ -217,10 +250,19 @@ def fetch_query(
             start_year,
             end_year,
         )
-        records_by_key.update(range_records)
+        dated_records.extend(range_records)
         incomplete_ranges.extend(range_incomplete)
 
-    return total, list(records_by_key.values()), incomplete_ranges
+    missing_count = total - len(dated_records)
+    undated_candidates = [
+        record for record in first_records if not has_partitioned_year(record.get("publication_date"))
+    ]
+    print(
+        f"[日付なし監査] 必要{missing_count}件、先頭500件内候補{len(undated_candidates)}件",
+        flush=True,
+    )
+    undated_records = annotate_partition(undated_candidates[: max(missing_count, 0)], "undated")
+    return total, dated_records + undated_records, incomplete_ranges
 
 
 def write_jsonl(path: Path, records: list[dict[str, Any]]) -> None:
@@ -257,26 +299,31 @@ def main() -> int:
             print(f"[失敗] {query_id}: {exc}", file=sys.stderr)
             return 1
 
-        records_by_key = {record["record_key"]: record for record in records}
         total_counts[query_id] = total
-        returned_counts[query_id] = len(records_by_key)
-        if len(records_by_key) != total or query_incomplete_ranges:
+        returned_counts[query_id] = len(records)
+        if len(records) != total or query_incomplete_ranges:
             incomplete_queries.append(query_id)
         if query_incomplete_ranges:
             incomplete_ranges[query_id] = query_incomplete_ranges
 
-        for record_key, record in records_by_key.items():
+        for record in records:
             occurrence = dict(record)
-            occurrence["occurrence_key"] = f"{query_id}:{record_key}"
+            occurrence["occurrence_key"] = (
+                f"{query_id}:{record['partition_id']}:{record['record_position']}"
+            )
             occurrence["source_query_id"] = query_id
             occurrence["source_query"] = query
             occurrences.append(occurrence)
 
-            unique_records[record_key] = record
+            record_key = record["record_key"]
+            normalized = dict(record)
+            normalized.pop("partition_id", None)
+            normalized.pop("record_position", None)
+            unique_records[record_key] = normalized
             matched_queries[record_key].add(query_id)
 
         print(
-            f"[取得完了] {query_id}: API全{total}件、全件統合後{len(records_by_key)}件",
+            f"[取得完了] {query_id}: API全{total}件、区間分割取得{len(records)}件",
             flush=True,
         )
 
@@ -307,14 +354,14 @@ def main() -> int:
         "source": SEARCH_URL,
         "collector": "tools/collect_optical_thin_film_jp.py",
         "api_result_limit": PAGE_SIZE,
-        "collection_method": "first_500_plus_recursive_publication_year_partitions",
+        "collection_method": "disjoint_publication_year_partitions_plus_undated_from_first_500",
         "initial_year_ranges": INITIAL_YEAR_RANGES,
         "query_count": len(QUERIES),
         "query_total_results": total_counts,
         "query_returned_results": returned_counts,
         "query_occurrence_count": len(occurrences),
         "record_count_after_record_key_deduplication": len(normalized_records),
-        "occurrence_key": "source_query_id_and_metadata_sha256",
+        "occurrence_key": "source_query_id_partition_id_record_position",
         "deduplication_key": "metadata_xml_sha256",
         "incomplete_queries": incomplete_queries,
         "incomplete_ranges": incomplete_ranges,
