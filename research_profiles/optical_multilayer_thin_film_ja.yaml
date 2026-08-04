@@ -1,0 +1,134 @@
+id: optical-multilayer-thin-film-ja
+name_ja: 光学多層薄膜の構造逆設計
+language: ja
+status: active
+updated_at: 2026-08-05
+
+purpose_ja: >-
+  光学多層薄膜について、古典的最適化、転送行列法、微分可能計算、
+  深層学習、生成モデル、エリプソメトリ、反射率・透過率からの逆推定を
+  横断的に収集するための研究プロファイル。
+
+arxiv:
+  categories:
+    - physics.optics
+    - physics.comp-ph
+    - cs.LG
+  query: >-
+    (all:"multilayer thin film" OR all:"optical multilayer" OR all:"thin-film stack")
+    AND
+    (all:"inverse design" OR all:"inverse problem" OR all:"ellipsometry"
+    OR all:"reflectometry" OR all:"transfer matrix")
+  sort_by: submitted_date
+  sort_order: desc
+  max_papers: 50
+
+  focused_queries:
+    - id: inverse-design
+      label_ja: 多層薄膜の逆設計
+      query: 'all:"multilayer thin film" AND all:"inverse design"'
+    - id: differentiable-tmm
+      label_ja: 微分可能な転送行列法
+      query: '(all:"transfer matrix method" OR all:TMM) AND (all:differentiable OR all:"automatic differentiation")'
+    - id: tandem-network
+      label_ja: 直列型ニューラルネットワーク
+      query: 'all:"thin film" AND (all:"tandem neural network" OR all:"forward model")'
+    - id: generative-model
+      label_ja: 生成モデル
+      query: 'all:"optical multilayer" AND (all:"diffusion model" OR all:"flow matching" OR all:autoregressive)'
+    - id: ellipsometry
+      label_ja: エリプソメトリ逆解析
+      query: 'all:ellipsometry AND (all:"inverse problem" OR all:reconstruction) AND (all:"deep learning" OR all:transformer OR all:"flow matching")'
+    - id: reflectometry
+      label_ja: 反射率からの膜厚・光学定数推定
+      query: 'all:reflectometry AND (all:"refractive index" OR all:"optical constants" OR all:thickness)'
+
+repositories:
+  github_queries:
+    - label_ja: 多層薄膜の逆設計実装
+      query: '"multilayer thin film" "inverse design" in:readme language:Python'
+    - label_ja: JAXまたはPyTorchによる転送行列法
+      query: '"transfer matrix method" (JAX OR PyTorch) in:readme language:Python'
+    - label_ja: 微分可能な薄膜計算
+      query: '("automatic differentiation" OR differentiable) "thin film" language:Python'
+    - label_ja: エリプソメトリ・反射率の深層学習
+      query: '(ellipsometry OR reflectometry) ("deep learning" OR "flow matching") in:readme language:Python'
+
+japanese_literature:
+  services:
+    - J-STAGE
+    - CiNii Research
+    - 国立国会図書館サーチ
+  queries:
+    - 多層薄膜 光学 逆設計
+    - 反射スペクトル 膜厚 光学定数 推定
+    - 分光反射率 屈折率 消衰係数 機械学習
+    - 薄膜 転送行列法 最適化
+    - エリプソメトリ 深層学習 膜厚
+    - 成膜 インプロセス 反射率 時系列 推定
+
+seed_references:
+  - key: ma2025_review
+    title: Optical multilayer thin film structure inverse design: From optimization to deep learning
+    year: 2025
+    type: peer_reviewed_review
+    role_ja: 分野全体の分類と研究動向を確認する総説
+    url: https://www.cell.com/iscience/fulltext/S2589-0042(25)00483-3
+
+  - key: danis2025_tmmax
+    title: TMMax: High-performance modeling of multilayer thin-film structures using transfer matrix method with JAX
+    year: 2025
+    type: peer_reviewed_software
+    role_ja: JAX、自動微分、ベクトル化された転送行列法の実装基盤
+    doi: 10.21105/joss.09088
+    url: https://joss.theoj.org/papers/10.21105/joss.09088
+    repository: https://github.com/bahremsd/tmmax
+
+  - key: langevin2024_pymoosh
+    title: PyMoosh: a comprehensive numerical toolkit for computing the optical properties of multilayered structures
+    year: 2024
+    type: peer_reviewed_tutorial
+    role_ja: 多層光学計算法の速度・安定性・適用範囲を比較する基準実装
+    url: https://opg.optica.org/josab/issue.cfm?issue=2&volume=41
+    repository: https://github.com/AnMoreau/PyMoosh
+
+  - key: byrnes2016_tmm
+    title: Multilayer optical calculations
+    year: 2016
+    type: technical_preprint
+    role_ja: 斜入射、吸収層、非干渉層を含む転送行列法の基礎
+    arxiv_id: '1603.02720'
+    url: https://arxiv.org/abs/1603.02720
+    repository: https://github.com/sbyrnes321/tmm
+
+  - key: ma2024_ellipbench
+    title: EllipBench: A Large-scale Benchmark for Machine-learning based Ellipsometry Modeling
+    year: 2024
+    type: preprint
+    role_ja: 機械学習ベースのエリプソメトリ逆解析用ベンチマーク
+    arxiv_id: '2407.17869'
+    url: https://arxiv.org/abs/2407.17869
+
+  - key: wang2026_reflectornn
+    title: ReflectoRNN: AI-Enabled In-Operando Optical Reflectometry for Evolving Materials Using a Recurrent Neural Network
+    year: 2026
+    type: peer_reviewed_article
+    role_ja: 時間変化する材料の複素屈折率を反射率系列から推定する工程内計測研究
+    doi: 10.1021/acsnano.6c04315
+    url: https://pubs.acs.org/doi/10.1021/acsnano.6c04315
+
+  - key: jung2025_cnn_lstm
+    title: Improving the performance of optical inverse design of multilayer thin films using CNN-LSTM tandem neural networks
+    year: 2025
+    type: preprint
+    role_ja: 逆推定器と順推定器を直列接続し、再構成誤差で非一意性を緩和する研究
+    arxiv_id: '2506.10044'
+    url: https://arxiv.org/abs/2506.10044
+
+quality_rules_ja:
+  - arXiv掲載だけを査読済みと表現しない
+  - 論文ID、版、公開日、著者、原文URLを保存する
+  - 同じarXiv IDの改題は別論文として重複登録せず、版履歴として扱う
+  - DOIと掲載誌情報は出版社または学会公式ページで照合する
+  - GitHub実装はライセンス、最終更新日、再現手順を別途記録する
+  - AI要約と原論文の記述を別フィールドに保持する
