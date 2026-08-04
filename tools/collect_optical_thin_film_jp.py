@@ -17,7 +17,7 @@ OUTPUT_JSONL = OUTPUT_DIR / "jp_literature.jsonl"
 OUTPUT_MANIFEST = OUTPUT_DIR / "jp_manifest.json"
 SEARCH_URL = "https://ndlsearch.ndl.go.jp/api/opensearch"
 PAGE_SIZE = 500
-MIN_PUBLICATION_YEAR = 1000
+MIN_PUBLICATION_YEAR = 1800
 MAX_PUBLICATION_YEAR = datetime.now(timezone.utc).year + 1
 
 # OpenSearchのanyは、半角スペース区切りで複数語のAND検索になる。
@@ -129,6 +129,7 @@ def collect_year_range(
     end_year: int,
 ) -> tuple[dict[str, dict[str, Any]], list[tuple[int, int, int]]]:
     total, records = fetch_window(session, query, start_year, end_year)
+    print(f"[期間監査] {start_year}-{end_year}: {total}件", flush=True)
     time.sleep(0.5)
 
     if total <= PAGE_SIZE:
