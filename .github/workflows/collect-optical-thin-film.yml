@@ -109,6 +109,35 @@ jobs:
                   raise SystemExit(f"重複が残っています: {data_path}")
 
               print(f"検証成功: {data_path} = {len(rows)}件")
+
+          jp_manifest_path = root / "jp_manifest.json"
+          jp_occurrences_path = root / "jp_query_records.jsonl"
+          if not jp_occurrences_path.is_file():
+              raise SystemExit(f"検索順位付き成果物が生成されていません: {jp_occurrences_path}")
+
+          jp_manifest = json.loads(jp_manifest_path.read_text(encoding="utf-8"))
+          jp_occurrences = [
+              json.loads(line)
+              for line in jp_occurrences_path.read_text(encoding="utf-8").splitlines()
+              if line.strip()
+          ]
+          occurrence_count = jp_manifest.get("query_occurrence_count")
+          if len(jp_occurrences) != occurrence_count:
+              raise SystemExit("日本語文献の検索結果総数がmanifestと一致しません")
+
+          occurrence_keys = [row["occurrence_key"] for row in jp_occurrences]
+          if len(occurrence_keys) != len(set(occurrence_keys)):
+              raise SystemExit("日本語文献の検索順位キーに重複があります")
+
+          query_totals = jp_manifest.get("query_total_results", {})
+          query_returned = jp_manifest.get("query_returned_results", {})
+          if query_totals != query_returned:
+              raise SystemExit("日本語文献でAPI総件数と取得件数が一致しません")
+
+          if sum(query_totals.values()) != occurrence_count:
+              raise SystemExit("日本語文献の検索式別総件数と全検索結果件数が一致しません")
+
+          print(f"検証成功: {jp_occurrences_path} = {len(jp_occurrences)}件")
           PY
 
       - name: 取得結果をmainへ保存
@@ -125,6 +154,7 @@ jobs:
           arxiv_count=$(python -c 'import json; print(json.load(open("research_data/optical_multilayer_thin_film/manifest.json"))["paper_count_after_arxiv_id_deduplication"])')
           github_count=$(python -c 'import json; print(json.load(open("research_data/optical_multilayer_thin_film/github_manifest.json"))["repository_count_after_full_name_deduplication"])')
           jp_count=$(python -c 'import json; print(json.load(open("research_data/optical_multilayer_thin_film/jp_manifest.json"))["record_count_after_record_key_deduplication"])')
-          git commit -m "data: collect optical thin-film sources (${arxiv_count} arXiv, ${github_count} GitHub, ${jp_count} JP)"
+          jp_occurrences=$(python -c 'import json; print(json.load(open("research_data/optical_multilayer_thin_film/jp_manifest.json"))["query_occurrence_count"])')
+          git commit -m "data: collect optical thin-film sources (${arxiv_count} arXiv, ${github_count} GitHub, ${jp_count} JP unique, ${jp_occurrences} JP results)"
           git pull --rebase origin main
           git push origin main
