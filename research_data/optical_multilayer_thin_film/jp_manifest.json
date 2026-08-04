@@ -1,12 +1,37 @@
 {
-  "collected_at": "2026-08-04T22:49:56.140185+00:00",
+  "api_result_limit": 500,
+  "collected_at": "2026-08-04T23:30:38.573582+00:00",
+  "collection_method": "disjoint_publication_year_partitions_plus_undated_from_first_500",
   "collector": "tools/collect_optical_thin_film_jp.py",
   "credit_ja": "メタデータ提供元：国立国会図書館サーチ",
   "dataset": "optical-multilayer-thin-film-japanese-literature",
-  "deduplication_key": "link_or_identifier_or_title",
+  "deduplication_key": "metadata_xml_sha256",
   "incomplete_queries": [],
+  "incomplete_ranges": {},
+  "initial_year_ranges": [
+    [
+      1800,
+      1949
+    ],
+    [
+      1950,
+      1999
+    ],
+    [
+      2000,
+      2009
+    ],
+    [
+      2010,
+      2019
+    ],
+    [
+      2020,
+      2027
+    ]
+  ],
   "language": "ja",
-  "page_size": 500,
+  "occurrence_key": "source_query_id_partition_id_record_position",
   "queries": {
     "ellipsometry": "エリプソメトリ 膜厚",
     "in_process_reflectometry": "インプロセス 反射率",
@@ -19,13 +44,14 @@
     "transfer_matrix": "転送行列法 薄膜"
   },
   "query_count": 9,
+  "query_occurrence_count": 1491,
   "query_returned_results": {
     "ellipsometry": 97,
     "in_process_reflectometry": 14,
     "inverse_design": 5,
-    "multilayer_thin_film": 999,
+    "multilayer_thin_film": 602,
     "optical_constants_thickness": 46,
-    "optical_thin_film": 999,
+    "optical_thin_film": 663,
     "reflection_thickness": 28,
     "spectral_reflectance": 34,
     "transfer_matrix": 2
@@ -41,7 +67,7 @@
     "spectral_reflectance": 34,
     "transfer_matrix": 2
   },
-  "record_count_after_record_key_deduplication": 1202,
-  "source": "https://ndlsearch.ndl.go.jp/api/opensearch",
+  "record_count_after_record_key_deduplication": 1139,
+  "source": "https://ndlsearch.ndl.go.jp/api/sru",
   "status": "complete"
 }
