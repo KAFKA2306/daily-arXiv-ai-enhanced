@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sys
+import time
 import xml.etree.ElementTree as ET
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -15,6 +16,7 @@ OUTPUT_DIR = Path("research_data/optical_multilayer_thin_film")
 OUTPUT_JSONL = OUTPUT_DIR / "jp_literature.jsonl"
 OUTPUT_MANIFEST = OUTPUT_DIR / "jp_manifest.json"
 SEARCH_URL = "https://ndlsearch.ndl.go.jp/api/opensearch"
+PAGE_SIZE = 500
 
 # OpenSearchのanyは、半角スペース区切りで複数語のAND検索になる。
 # 個々の検索式を狭くしすぎず、取得後にmatched_queriesで由来を保持する。
@@ -55,22 +57,8 @@ def first(values: dict[str, list[str]], *keys: str) -> str | None:
     return None
 
 
-def fetch_query(session: requests.Session, query: str) -> tuple[int, list[dict[str, Any]]]:
-    response = session.get(
-        SEARCH_URL,
-        params={
-            "any": query,
-            "cnt": 500,
-            "idx": 1,
-        },
-        timeout=90,
-    )
-    if response.status_code != 200:
-        raise RuntimeError(
-            f"NDL Search API failed: status={response.status_code}, body={response.text[:500]}"
-        )
-
-    root = ET.fromstring(response.content)
+def parse_response(content: bytes) -> tuple[int, list[dict[str, Any]]]:
+    root = ET.fromstring(content)
     channel = next((element for element in root.iter() if local_name(element.tag) == "channel"), None)
     if channel is None:
         raise RuntimeError("NDL Search API response does not contain channel")
@@ -109,6 +97,42 @@ def fetch_query(session: requests.Session, query: str) -> tuple[int, list[dict[s
     return total_results, records
 
 
+def fetch_query(session: requests.Session, query: str) -> tuple[int, list[dict[str, Any]]]:
+    start_index = 1
+    total_results: int | None = None
+    records: list[dict[str, Any]] = []
+
+    while total_results is None or len(records) < total_results:
+        response = session.get(
+            SEARCH_URL,
+            params={
+                "any": query,
+                "cnt": PAGE_SIZE,
+                "idx": start_index,
+            },
+            timeout=90,
+        )
+        if response.status_code != 200:
+            raise RuntimeError(
+                f"NDL Search API failed: status={response.status_code}, body={response.text[:500]}"
+            )
+
+        page_total, page_records = parse_response(response.content)
+        if total_results is None:
+            total_results = page_total
+
+        if not page_records:
+            break
+
+        records.extend(page_records)
+        start_index += len(page_records)
+
+        if len(records) < total_results:
+            time.sleep(1)
+
+    return total_results or 0, records
+
+
 def main() -> int:
     session = requests.Session()
     session.headers.update(
@@ -122,7 +146,7 @@ def main() -> int:
     matches: dict[str, set[str]] = defaultdict(set)
     returned_counts: dict[str, int] = {}
     total_counts: dict[str, int] = {}
-    truncated_queries: list[str] = []
+    incomplete_queries: list[str] = []
 
     for query_id, query in QUERIES.items():
         print(f"[取得開始] {query_id}: {query}", flush=True)
@@ -134,8 +158,8 @@ def main() -> int:
 
         total_counts[query_id] = total
         returned_counts[query_id] = len(records)
-        if total > 500:
-            truncated_queries.append(query_id)
+        if len(records) < total:
+            incomplete_queries.append(query_id)
 
         for record in records:
             key = record.get("record_key")
@@ -172,16 +196,17 @@ def main() -> int:
     manifest = {
         "dataset": "optical-multilayer-thin-film-japanese-literature",
         "language": "ja",
-        "status": "complete" if not truncated_queries else "complete_with_ndl_500_result_limit",
+        "status": "complete" if not incomplete_queries else "incomplete",
         "collected_at": datetime.now(timezone.utc).isoformat(),
         "source": SEARCH_URL,
         "collector": "tools/collect_optical_thin_film_jp.py",
+        "page_size": PAGE_SIZE,
         "query_count": len(QUERIES),
         "query_total_results": total_counts,
         "query_returned_results": returned_counts,
         "record_count_after_record_key_deduplication": len(records),
         "deduplication_key": "link_or_identifier_or_title",
-        "queries_truncated_by_ndl_500_result_limit": truncated_queries,
+        "incomplete_queries": incomplete_queries,
         "queries": QUERIES,
         "credit_ja": "メタデータ提供元：国立国会図書館サーチ",
     }
