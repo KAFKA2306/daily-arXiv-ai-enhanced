@@ -1,0 +1,28 @@
+{
+  "collected_at": "2026-08-04T22:43:13.519118+00:00",
+  "collector": "tools/collect_optical_thin_film_github.py",
+  "dataset": "optical-multilayer-thin-film-github",
+  "deduplication_key": "full_name",
+  "language": "ja",
+  "queries": {
+    "differentiable_thin_film": "differentiable \"thin film\" in:readme language:Python",
+    "ellipsometry_ml": "ellipsometry \"deep learning\" in:readme language:Python",
+    "inverse_design": "\"multilayer thin film\" \"inverse design\" in:readme language:Python",
+    "reflectometry_optical_constants": "reflectometry \"optical constants\" in:readme language:Python",
+    "tmm_jax": "\"transfer matrix method\" JAX in:readme language:Python",
+    "tmm_pytorch": "\"transfer matrix method\" PyTorch in:readme language:Python"
+  },
+  "queries_truncated_by_github_search_limit": [],
+  "query_count": 6,
+  "query_result_counts_before_deduplication": {
+    "differentiable_thin_film": 77,
+    "ellipsometry_ml": 6,
+    "inverse_design": 10,
+    "reflectometry_optical_constants": 3,
+    "tmm_jax": 6,
+    "tmm_pytorch": 26
+  },
+  "repository_count_after_full_name_deduplication": 113,
+  "source": "https://api.github.com/search/repositories",
+  "status": "complete"
+}

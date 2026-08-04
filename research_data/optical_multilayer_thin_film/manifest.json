@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-08-04T22:37:31.337637+00:00",
+  "collected_at": "2026-08-04T22:43:09.387609+00:00",
   "collector": "tools/collect_optical_thin_film_arxiv.py",
   "dataset": "optical-multilayer-thin-film-arxiv",
   "deduplication_key": "arxiv_id_without_version_suffix",

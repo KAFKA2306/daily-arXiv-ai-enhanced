@@ -1,0 +1,49 @@
+{
+  "collected_at": "2026-08-04T22:44:41.345432+00:00",
+  "collector": "tools/collect_optical_thin_film_jp.py",
+  "credit_ja": "メタデータ提供元：国立国会図書館サーチ",
+  "dataset": "optical-multilayer-thin-film-japanese-literature",
+  "deduplication_key": "link_or_identifier_or_title",
+  "language": "ja",
+  "queries": {
+    "ellipsometry": "エリプソメトリ 膜厚",
+    "in_process_reflectometry": "インプロセス 反射率",
+    "inverse_design": "薄膜 逆設計",
+    "multilayer_thin_film": "多層薄膜",
+    "optical_constants_thickness": "光学定数 膜厚",
+    "optical_thin_film": "光学薄膜",
+    "reflection_thickness": "反射スペクトル 膜厚",
+    "spectral_reflectance": "分光反射率 薄膜",
+    "transfer_matrix": "転送行列法 薄膜"
+  },
+  "queries_truncated_by_ndl_500_result_limit": [
+    "multilayer_thin_film",
+    "optical_thin_film"
+  ],
+  "query_count": 9,
+  "query_returned_results": {
+    "ellipsometry": 97,
+    "in_process_reflectometry": 14,
+    "inverse_design": 5,
+    "multilayer_thin_film": 500,
+    "optical_constants_thickness": 46,
+    "optical_thin_film": 500,
+    "reflection_thickness": 28,
+    "spectral_reflectance": 34,
+    "transfer_matrix": 2
+  },
+  "query_total_results": {
+    "ellipsometry": 97,
+    "in_process_reflectometry": 14,
+    "inverse_design": 5,
+    "multilayer_thin_film": 602,
+    "optical_constants_thickness": 46,
+    "optical_thin_film": 663,
+    "reflection_thickness": 28,
+    "spectral_reflectance": 34,
+    "transfer_matrix": 2
+  },
+  "record_count_after_record_key_deduplication": 1202,
+  "source": "https://ndlsearch.ndl.go.jp/api/opensearch",
+  "status": "complete_with_ndl_500_result_limit"
+}
