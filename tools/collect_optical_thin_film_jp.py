@@ -15,13 +15,11 @@ import requests
 OUTPUT_DIR = Path("research_data/optical_multilayer_thin_film")
 OUTPUT_JSONL = OUTPUT_DIR / "jp_literature.jsonl"
 OUTPUT_MANIFEST = OUTPUT_DIR / "jp_manifest.json"
-SEARCH_URL = "https://ndlsearch.ndl.go.jp/api/opensearch"
+SEARCH_URL = "https://ndlsearch.ndl.go.jp/api/sru"
 PAGE_SIZE = 500
 MIN_PUBLICATION_YEAR = 1800
 MAX_PUBLICATION_YEAR = datetime.now(timezone.utc).year + 1
 
-# OpenSearchのanyは、半角スペース区切りで複数語のAND検索になる。
-# 個々の検索式を狭くしすぎず、取得後にmatched_queriesで由来を保持する。
 QUERIES: dict[str, str] = {
     "multilayer_thin_film": "多層薄膜",
     "optical_thin_film": "光学薄膜",
@@ -39,64 +37,115 @@ def local_name(tag: str) -> str:
     return tag.rsplit("}", 1)[-1]
 
 
-def child_texts(item: ET.Element) -> dict[str, list[str]]:
-    values: dict[str, list[str]] = defaultdict(list)
-    for child in item.iter():
-        if child is item:
+def escape_cql(value: str) -> str:
+    return value.replace("\\", "\\\\").replace('"', '\\"')
+
+
+def values_by_local_name(root: ET.Element, name: str) -> list[str]:
+    values: list[str] = []
+    for node in root.iter():
+        if local_name(node.tag) != name:
             continue
-        text = " ".join("".join(child.itertext()).split())
-        name = local_name(child.tag)
-        if text and text not in values[name]:
-            values[name].append(text)
-    return dict(values)
+        text = " ".join("".join(node.itertext()).split())
+        if text and text not in values:
+            values.append(text)
+    return values
 
 
-def first(values: dict[str, list[str]], *keys: str) -> str | None:
-    for key in keys:
-        entries = values.get(key, [])
-        if entries:
-            return entries[0]
-    return None
+def first(values: list[str]) -> str | None:
+    return values[0] if values else None
 
 
-def parse_response(content: bytes) -> tuple[int, list[dict[str, Any]]]:
+def parse_record_data(record_data: ET.Element) -> ET.Element:
+    children = list(record_data)
+    if children:
+        return children[0]
+
+    escaped_xml = (record_data.text or "").strip()
+    if escaped_xml:
+        try:
+            return ET.fromstring(escaped_xml)
+        except ET.ParseError:
+            pass
+
+    return record_data
+
+
+def parse_sru_response(content: bytes) -> tuple[int, list[dict[str, Any]]]:
     root = ET.fromstring(content)
-    channel = next((element for element in root.iter() if local_name(element.tag) == "channel"), None)
-    if channel is None:
-        raise RuntimeError("NDL Search API response does not contain channel")
+    total_text = first(values_by_local_name(root, "numberOfRecords"))
+    total = int(total_text) if total_text else 0
 
-    total_results = 0
-    for child in channel:
-        if local_name(child.tag) == "totalResults" and child.text:
-            total_results = int(child.text)
-            break
+    diagnostics = values_by_local_name(root, "message")
+    if diagnostics and total == 0:
+        raise RuntimeError(f"NDL SRU diagnostic: {'; '.join(diagnostics)}")
 
     records: list[dict[str, Any]] = []
-    items = [element for element in channel if local_name(element.tag) == "item"]
-    for item in items:
-        values = child_texts(item)
-        link = first(values, "link")
-        guid = first(values, "guid", "identifier")
-        record_key = link or guid or first(values, "title")
+    for record in (node for node in root.iter() if local_name(node.tag) == "record"):
+        record_data = next(
+            (node for node in record if local_name(node.tag) == "recordData"),
+            None,
+        )
+        if record_data is None:
+            continue
+
+        metadata = parse_record_data(record_data)
+        record_identifiers = [
+            " ".join("".join(node.itertext()).split())
+            for node in record
+            if local_name(node.tag) == "recordIdentifier"
+        ]
+        identifiers = values_by_local_name(metadata, "identifier")
+        titles = values_by_local_name(metadata, "title")
+        creators = values_by_local_name(metadata, "creator")
+        dates = values_by_local_name(metadata, "date") + values_by_local_name(metadata, "issued")
+        publishers = values_by_local_name(metadata, "publisher")
+        descriptions = values_by_local_name(metadata, "description")
+        subjects = values_by_local_name(metadata, "subject")
+        types = values_by_local_name(metadata, "type")
+        languages = values_by_local_name(metadata, "language")
+
+        record_key = (
+            first(record_identifiers)
+            or first(identifiers)
+            or " | ".join(
+                part
+                for part in [first(titles), first(creators), first(dates)]
+                if part
+            )
+        )
+        if not record_key:
+            continue
+
+        link = next(
+            (value for value in identifiers if value.startswith(("http://", "https://"))),
+            None,
+        )
         records.append(
             {
                 "record_key": record_key,
-                "title": first(values, "title"),
+                "title": first(titles),
                 "link": link,
-                "identifier": guid,
-                "creators": values.get("creator", []),
-                "publishers": values.get("publisher", []),
-                "publication_names": values.get("publicationName", []),
-                "publication_date": first(values, "issued", "date", "pubDate"),
-                "descriptions": values.get("description", []),
-                "subjects": values.get("subject", []),
-                "types": values.get("type", []),
-                "raw_metadata": values,
-                "source": "国立国会図書館サーチ OpenSearch API",
+                "identifiers": identifiers,
+                "creators": creators,
+                "publishers": publishers,
+                "publication_date": first(dates),
+                "descriptions": descriptions,
+                "subjects": subjects,
+                "types": types,
+                "languages": languages,
+                "source": "国立国会図書館サーチ SRU API",
             }
         )
 
-    return total_results, records
+    return total, records
+
+
+def build_cql(query: str, start_year: int | None = None, end_year: int | None = None) -> str:
+    clauses = [f'anywhere all "{escape_cql(query)}"']
+    if start_year is not None and end_year is not None:
+        clauses.extend([f'from="{start_year}"', f'until="{end_year}"'])
+    return " AND ".join(clauses)
 
 
 def fetch_window(
@@ -105,21 +154,24 @@ def fetch_window(
     start_year: int | None = None,
     end_year: int | None = None,
 ) -> tuple[int, list[dict[str, Any]]]:
-    params: dict[str, Any] = {
-        "any": query,
-        "cnt": PAGE_SIZE,
-        "idx": 1,
-    }
-    if start_year is not None and end_year is not None:
-        params["from"] = f"{start_year:04d}-01-01"
-        params["until"] = f"{end_year:04d}-12-31"
-
-    response = session.get(SEARCH_URL, params=params, timeout=90)
+    cql = build_cql(query, start_year, end_year)
+    response = session.get(
+        SEARCH_URL,
+        params={
+            "operation": "searchRetrieve",
+            "version": "1.2",
+            "recordSchema": "dc",
+            "maximumRecords": PAGE_SIZE,
+            "startRecord": 1,
+            "query": cql,
+        },
+        timeout=90,
+    )
     if response.status_code != 200:
         raise RuntimeError(
-            f"NDL Search API failed: status={response.status_code}, body={response.text[:500]}"
+            f"NDL SRU API failed: status={response.status_code}, body={response.text[:500]}"
         )
-    return parse_response(response.content)
+    return parse_sru_response(response.content)
 
 
 def collect_year_range(
@@ -132,19 +184,16 @@ def collect_year_range(
     print(f"[期間監査] {start_year}-{end_year}: {total}件", flush=True)
     time.sleep(0.5)
 
+    records_by_key = {
+        record["record_key"]: record
+        for record in records
+        if record.get("record_key")
+    }
     if total <= PAGE_SIZE:
-        return {
-            record["record_key"]: record
-            for record in records
-            if record.get("record_key")
-        }, []
+        return records_by_key, []
 
     if start_year >= end_year:
-        return {
-            record["record_key"]: record
-            for record in records
-            if record.get("record_key")
-        }, [(start_year, end_year, total)]
+        return records_by_key, [(start_year, end_year, total)]
 
     middle_year = (start_year + end_year) // 2
     left_records, left_incomplete = collect_year_range(
@@ -191,7 +240,7 @@ def main() -> int:
     session = requests.Session()
     session.headers.update(
         {
-            "Accept": "application/rss+xml, application/xml;q=0.9, */*;q=0.1",
+            "Accept": "application/xml",
             "User-Agent": "KAFKA2306-daily-arXiv-ai-enhanced/1.0",
         }
     )
@@ -263,13 +312,13 @@ def main() -> int:
         "source": SEARCH_URL,
         "collector": "tools/collect_optical_thin_film_jp.py",
         "api_result_limit": PAGE_SIZE,
-        "partition_method": "recursive_publication_year_ranges",
+        "partition_method": "sru_recursive_publication_year_ranges",
         "publication_year_range": [MIN_PUBLICATION_YEAR, MAX_PUBLICATION_YEAR],
         "query_count": len(QUERIES),
         "query_total_results": total_counts,
         "query_returned_unique_results": returned_counts,
         "record_count_after_record_key_deduplication": len(records),
-        "deduplication_key": "link_or_identifier_or_title",
+        "deduplication_key": "sru_record_identifier_or_metadata_fingerprint",
         "incomplete_queries": incomplete_queries,
         "unsplittable_ranges": unsplittable_ranges,
         "queries": QUERIES,
