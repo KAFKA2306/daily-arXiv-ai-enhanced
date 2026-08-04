@@ -17,8 +17,6 @@ OUTPUT_JSONL = OUTPUT_DIR / "jp_literature.jsonl"
 OUTPUT_MANIFEST = OUTPUT_DIR / "jp_manifest.json"
 SEARCH_URL = "https://ndlsearch.ndl.go.jp/api/sru"
 PAGE_SIZE = 500
-MIN_PUBLICATION_YEAR = 1800
-MAX_PUBLICATION_YEAR = datetime.now(timezone.utc).year + 1
 
 QUERIES: dict[str, str] = {
     "multilayer_thin_film": "多層薄膜",
@@ -144,20 +142,12 @@ def parse_sru_response(content: bytes) -> tuple[int, list[dict[str, Any]]]:
     return total, records
 
 
-def build_cql(query: str, start_year: int | None = None, end_year: int | None = None) -> str:
-    clauses = [f'anywhere all "{escape_cql(query)}"']
-    if start_year is not None and end_year is not None:
-        clauses.extend([f'from="{start_year}"', f'until="{end_year}"'])
-    return " AND ".join(clauses)
-
-
-def fetch_window(
+def fetch_page(
     session: requests.Session,
     query: str,
-    start_year: int | None = None,
-    end_year: int | None = None,
+    start_record: int,
 ) -> tuple[int, list[dict[str, Any]]]:
-    cql = build_cql(query, start_year, end_year)
+    cql = f'anywhere all "{escape_cql(query)}"'
     response = session.get(
         SEARCH_URL,
         params={
@@ -165,7 +155,7 @@ def fetch_window(
             "version": "1.2",
             "recordSchema": "dc",
             "maximumRecords": PAGE_SIZE,
-            "startRecord": 1,
+            "startRecord": start_record,
             "query": cql,
         },
         timeout=90,
@@ -177,66 +167,40 @@ def fetch_window(
     return parse_sru_response(response.content)
 
 
-def collect_year_range(
-    session: requests.Session,
-    query: str,
-    start_year: int,
-    end_year: int,
-) -> tuple[dict[str, dict[str, Any]], list[tuple[int, int, int]]]:
-    total, records = fetch_window(session, query, start_year, end_year)
-    print(f"[期間監査] {start_year}-{end_year}: {total}件", flush=True)
-    time.sleep(0.5)
-
-    records_by_key = {
-        record["record_key"]: record
-        for record in records
-        if record.get("record_key")
-    }
-    if total <= PAGE_SIZE:
-        return records_by_key, []
-
-    if start_year >= end_year:
-        return records_by_key, [(start_year, end_year, total)]
-
-    middle_year = (start_year + end_year) // 2
-    left_records, left_incomplete = collect_year_range(
-        session,
-        query,
-        start_year,
-        middle_year,
-    )
-    right_records, right_incomplete = collect_year_range(
-        session,
-        query,
-        middle_year + 1,
-        end_year,
-    )
-    left_records.update(right_records)
-    return left_records, left_incomplete + right_incomplete
-
-
 def fetch_query(
     session: requests.Session,
     query: str,
-) -> tuple[int, list[dict[str, Any]], list[tuple[int, int, int]]]:
-    total_results, first_records = fetch_window(session, query)
-    records_by_key = {
-        record["record_key"]: record
-        for record in first_records
-        if record.get("record_key")
-    }
+) -> tuple[int, list[dict[str, Any]], int]:
+    start_record = 1
+    total_results: int | None = None
+    raw_returned_count = 0
+    records_by_key: dict[str, dict[str, Any]] = {}
 
-    if total_results <= PAGE_SIZE:
-        return total_results, list(records_by_key.values()), []
+    while total_results is None or raw_returned_count < total_results:
+        page_total, page_records = fetch_page(session, query, start_record)
+        if total_results is None:
+            total_results = page_total
 
-    dated_records, unsplittable_ranges = collect_year_range(
-        session,
-        query,
-        MIN_PUBLICATION_YEAR,
-        MAX_PUBLICATION_YEAR,
-    )
-    records_by_key.update(dated_records)
-    return total_results, list(records_by_key.values()), unsplittable_ranges
+        if not page_records:
+            break
+
+        raw_returned_count += len(page_records)
+        for record in page_records:
+            key = record.get("record_key")
+            if key:
+                records_by_key[key] = record
+
+        print(
+            f"[ページ取得] startRecord={start_record}: "
+            f"{len(page_records)}件、累計{raw_returned_count}/{total_results}件",
+            flush=True,
+        )
+        start_record += len(page_records)
+
+        if raw_returned_count < total_results:
+            time.sleep(1)
+
+    return total_results or 0, list(records_by_key.values()), raw_returned_count
 
 
 def main() -> int:
@@ -250,15 +214,15 @@ def main() -> int:
 
     records_by_key: dict[str, dict[str, Any]] = {}
     matches: dict[str, set[str]] = defaultdict(set)
-    returned_counts: dict[str, int] = {}
+    unique_counts: dict[str, int] = {}
+    raw_returned_counts: dict[str, int] = {}
     total_counts: dict[str, int] = {}
     incomplete_queries: list[str] = []
-    unsplittable_ranges: dict[str, list[tuple[int, int, int]]] = {}
 
     for query_id, query in QUERIES.items():
         print(f"[取得開始] {query_id}: {query}", flush=True)
         try:
-            total, records, query_unsplittable = fetch_query(session, query)
+            total, records, raw_returned = fetch_query(session, query)
         except Exception as exc:
             print(f"[失敗] {query_id}: {exc}", file=sys.stderr)
             return 1
@@ -269,18 +233,18 @@ def main() -> int:
             if record.get("record_key")
         }
         total_counts[query_id] = total
-        returned_counts[query_id] = len(unique_query_records)
-        if len(unique_query_records) < total or query_unsplittable:
+        raw_returned_counts[query_id] = raw_returned
+        unique_counts[query_id] = len(unique_query_records)
+        if raw_returned < total:
             incomplete_queries.append(query_id)
-        if query_unsplittable:
-            unsplittable_ranges[query_id] = query_unsplittable
 
         for key, record in unique_query_records.items():
             records_by_key[key] = record
             matches[key].add(query_id)
 
         print(
-            f"[取得完了] {query_id}: 全{total}件中{len(unique_query_records)}件を一意取得",
+            f"[取得完了] {query_id}: API全{total}件、"
+            f"取得{raw_returned}件、一意{len(unique_query_records)}件",
             flush=True,
         )
 
@@ -314,16 +278,15 @@ def main() -> int:
         "collected_at": datetime.now(timezone.utc).isoformat(),
         "source": SEARCH_URL,
         "collector": "tools/collect_optical_thin_film_jp.py",
-        "api_result_limit": PAGE_SIZE,
-        "partition_method": "sru_recursive_publication_year_ranges",
-        "publication_year_range": [MIN_PUBLICATION_YEAR, MAX_PUBLICATION_YEAR],
+        "api_page_size": PAGE_SIZE,
+        "pagination_method": "sru_startRecord",
         "query_count": len(QUERIES),
         "query_total_results": total_counts,
-        "query_returned_unique_results": returned_counts,
+        "query_raw_returned_results": raw_returned_counts,
+        "query_unique_results": unique_counts,
         "record_count_after_record_key_deduplication": len(records),
         "deduplication_key": "sru_record_identifier_or_metadata_fingerprint",
         "incomplete_queries": incomplete_queries,
-        "unsplittable_ranges": unsplittable_ranges,
         "queries": QUERIES,
         "credit_ja": "メタデータ提供元：国立国会図書館サーチ",
     }
