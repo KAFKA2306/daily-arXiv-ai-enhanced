@@ -78,6 +78,9 @@ def parse_sru_response(content: bytes) -> tuple[int, list[dict[str, Any]]]:
 
     diagnostics = values_by_local_name(root, "message")
     if diagnostics and total == 0:
+        normalized = " ".join(diagnostics).casefold()
+        if "record does not exist" in normalized:
+            return 0, []
         raise RuntimeError(f"NDL SRU diagnostic: {'; '.join(diagnostics)}")
 
     records: list[dict[str, Any]] = []
