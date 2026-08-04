@@ -1,4 +1,4 @@
-name: 光学多層薄膜 arXiv 全件取得
+name: 光学多層薄膜 文献・OSS全件取得
 
 on:
   push:
@@ -7,6 +7,8 @@ on:
     paths:
       - .github/workflows/collect-optical-thin-film.yml
       - tools/collect_optical_thin_film_arxiv.py
+      - tools/collect_optical_thin_film_github.py
+      - tools/collect_optical_thin_film_jp.py
       - research_profiles/optical_multilayer_thin_film_ja.yaml
   workflow_dispatch:
 
@@ -38,10 +40,22 @@ jobs:
         run: uv sync --frozen
 
       - name: 収集器を静的検査
-        run: uv run ruff check tools/collect_optical_thin_film_arxiv.py
+        run: |
+          uv run ruff check \
+            tools/collect_optical_thin_film_arxiv.py \
+            tools/collect_optical_thin_film_github.py \
+            tools/collect_optical_thin_film_jp.py
 
       - name: arXivを全件取得
         run: uv run python tools/collect_optical_thin_film_arxiv.py
+
+      - name: GitHub OSS候補を全件取得
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: uv run python tools/collect_optical_thin_film_github.py
+
+      - name: 日本語文献を取得
+        run: uv run python tools/collect_optical_thin_film_jp.py
 
       - name: 完全性を検証
         run: |
@@ -49,28 +63,52 @@ jobs:
           import json
           from pathlib import Path
 
-          manifest_path = Path("research_data/optical_multilayer_thin_film/manifest.json")
-          data_path = Path("research_data/optical_multilayer_thin_film/arxiv_papers.jsonl")
+          root = Path("research_data/optical_multilayer_thin_film")
+          datasets = [
+              (
+                  root / "manifest.json",
+                  root / "arxiv_papers.jsonl",
+                  "paper_count_after_arxiv_id_deduplication",
+                  "arxiv_id",
+              ),
+              (
+                  root / "github_manifest.json",
+                  root / "github_repositories.jsonl",
+                  "repository_count_after_full_name_deduplication",
+                  "full_name",
+              ),
+              (
+                  root / "jp_manifest.json",
+                  root / "jp_literature.jsonl",
+                  "record_count_after_record_key_deduplication",
+                  "record_key",
+              ),
+          ]
 
-          if not manifest_path.is_file() or not data_path.is_file():
-              raise SystemExit("成果物が生成されていません")
+          for manifest_path, data_path, count_key, identity_key in datasets:
+              if not manifest_path.is_file() or not data_path.is_file():
+                  raise SystemExit(f"成果物が生成されていません: {manifest_path}")
 
-          manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-          if manifest.get("status") != "complete":
-              raise SystemExit("収集状態がcompleteではありません")
+              manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+              if not str(manifest.get("status", "")).startswith("complete"):
+                  raise SystemExit(f"収集状態がcompleteではありません: {manifest_path}")
 
-          rows = [line for line in data_path.read_text(encoding="utf-8").splitlines() if line.strip()]
-          if not rows:
-              raise SystemExit("取得結果が0件です")
+              rows = [
+                  json.loads(line)
+                  for line in data_path.read_text(encoding="utf-8").splitlines()
+                  if line.strip()
+              ]
+              if not rows:
+                  raise SystemExit(f"取得結果が0件です: {data_path}")
 
-          if len(rows) != manifest.get("paper_count_after_arxiv_id_deduplication"):
-              raise SystemExit("manifestの件数とJSONLの件数が一致しません")
+              if len(rows) != manifest.get(count_key):
+                  raise SystemExit(f"manifestの件数とJSONLの件数が一致しません: {data_path}")
 
-          ids = [json.loads(line)["arxiv_id"] for line in rows]
-          if len(ids) != len(set(ids)):
-              raise SystemExit("arXiv IDの重複が残っています")
+              identities = [row[identity_key] for row in rows]
+              if len(identities) != len(set(identities)):
+                  raise SystemExit(f"重複が残っています: {data_path}")
 
-          print(f"検証成功: {len(rows)}件")
+              print(f"検証成功: {data_path} = {len(rows)}件")
           PY
 
       - name: 取得結果をmainへ保存
@@ -84,7 +122,9 @@ jobs:
             exit 0
           fi
 
-          count=$(python -c 'import json; print(json.load(open("research_data/optical_multilayer_thin_film/manifest.json"))["paper_count_after_arxiv_id_deduplication"])')
-          git commit -m "data: collect ${count} optical thin-film arXiv papers"
+          arxiv_count=$(python -c 'import json; print(json.load(open("research_data/optical_multilayer_thin_film/manifest.json"))["paper_count_after_arxiv_id_deduplication"])')
+          github_count=$(python -c 'import json; print(json.load(open("research_data/optical_multilayer_thin_film/github_manifest.json"))["repository_count_after_full_name_deduplication"])')
+          jp_count=$(python -c 'import json; print(json.load(open("research_data/optical_multilayer_thin_film/jp_manifest.json"))["record_count_after_record_key_deduplication"])')
+          git commit -m "data: collect optical thin-film sources (${arxiv_count} arXiv, ${github_count} GitHub, ${jp_count} JP)"
           git pull --rebase origin main
           git push origin main
