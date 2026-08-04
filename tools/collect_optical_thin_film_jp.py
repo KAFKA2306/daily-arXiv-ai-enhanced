@@ -98,7 +98,7 @@ def parse_response(content: bytes) -> tuple[int, list[dict[str, Any]]]:
 
 
 def fetch_query(session: requests.Session, query: str) -> tuple[int, list[dict[str, Any]]]:
-    start_index = 1
+    page_index = 1
     total_results: int | None = None
     records: list[dict[str, Any]] = []
 
@@ -108,7 +108,7 @@ def fetch_query(session: requests.Session, query: str) -> tuple[int, list[dict[s
             params={
                 "any": query,
                 "cnt": PAGE_SIZE,
-                "idx": start_index,
+                "idx": page_index,
             },
             timeout=90,
         )
@@ -125,7 +125,7 @@ def fetch_query(session: requests.Session, query: str) -> tuple[int, list[dict[s
             break
 
         records.extend(page_records)
-        start_index += len(page_records)
+        page_index += 1
 
         if len(records) < total_results:
             time.sleep(1)
