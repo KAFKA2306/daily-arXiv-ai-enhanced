@@ -1,0 +1,56 @@
+name: arXiv data quality
+
+on:
+  pull_request:
+    paths:
+      - "data/**/*.jsonl"
+      - "scripts/validate_arxiv_jsonl.py"
+      - "tests/test_validate_arxiv_jsonl.py"
+      - ".github/workflows/arxiv-data-quality.yml"
+  push:
+    branches: [main]
+    paths:
+      - "data/**/*.jsonl"
+      - "scripts/validate_arxiv_jsonl.py"
+      - "tests/test_validate_arxiv_jsonl.py"
+      - ".github/workflows/arxiv-data-quality.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: arxiv-data-quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile and test
+        run: |
+          python -m py_compile scripts/validate_arxiv_jsonl.py tests/test_validate_arxiv_jsonl.py
+          python -m unittest tests.test_validate_arxiv_jsonl -v
+      - name: Validate each published dataset independently
+        run: |
+          mkdir -p build/arxiv-audits
+          count=0
+          while IFS= read -r -d '' file; do
+            name="$(basename "$file" .jsonl)"
+            python scripts/validate_arxiv_jsonl.py "$file" --report "build/arxiv-audits/${name}.json"
+            count=$((count + 1))
+          done < <(find data -type f -name '*.jsonl' -print0 | sort -z)
+          test "$count" -gt 0
+      - name: Upload audit reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: arxiv-data-audits
+          path: build/arxiv-audits
+          if-no-files-found: warn
+          retention-days: 14
