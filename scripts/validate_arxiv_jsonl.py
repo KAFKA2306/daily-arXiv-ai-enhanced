@@ -14,7 +14,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 ARXIV_ID = re.compile(r"^(?:\d{4}\.\d{4,5}|[a-z-]+(?:\.[A-Z]{2})?/\d{7})(?:v\d+)?$", re.IGNORECASE)
-REQUIRED = ("id", "pdf", "abs", "authors", "title", "categories", "summary")
+COMMON_REQUIRED = ("id", "authors", "title", "categories")
 
 
 def _is_http_url(value: Any, *, host: str | None = None) -> bool:
@@ -24,6 +24,13 @@ def _is_http_url(value: Any, *, host: str | None = None) -> bool:
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
         return False
     return host is None or parsed.netloc.lower() == host
+
+
+def _first(record: dict[str, Any], *names: str) -> Any:
+    for name in names:
+        if name in record:
+            return record[name]
+    return None
 
 
 def validate_record(record: Any, *, path: str, line: int) -> list[dict[str, Any]]:
@@ -36,7 +43,7 @@ def validate_record(record: Any, *, path: str, line: int) -> list[dict[str, Any]
         add("record_type", "record must be a JSON object")
         return errors
 
-    missing = [key for key in REQUIRED if key not in record]
+    missing = [key for key in COMMON_REQUIRED if key not in record]
     if missing:
         add("missing_fields", f"missing required fields: {', '.join(missing)}")
 
@@ -44,17 +51,23 @@ def validate_record(record: Any, *, path: str, line: int) -> list[dict[str, Any]
     if not isinstance(arxiv_id, str) or not ARXIV_ID.fullmatch(arxiv_id):
         add("invalid_id", "id must be a valid arXiv identifier")
 
-    for field, suffix in (("abs", "/abs/"), ("pdf", "/pdf/")):
-        value = record.get(field)
-        if not _is_http_url(value, host="arxiv.org") or suffix not in value:
-            add(f"invalid_{field}_url", f"{field} must be an arxiv.org {suffix.strip('/')} URL")
+    url_fields = (("abs", "arxiv_url", "/abs/"), ("pdf", "pdf_url", "/pdf/"))
+    for legacy, enhanced, suffix in url_fields:
+        value = _first(record, legacy, enhanced)
+        if value is None:
+            add(f"missing_{legacy}_url", f"record requires {legacy} or {enhanced}")
+        elif not _is_http_url(value, host="arxiv.org") or suffix not in value:
+            add(f"invalid_{legacy}_url", f"{legacy}/{enhanced} must be an arxiv.org {suffix.strip('/')} URL")
         elif isinstance(arxiv_id, str) and arxiv_id not in value:
-            add(f"{field}_id_mismatch", f"{field} URL must contain the record id")
+            add(f"{legacy}_id_mismatch", f"{legacy}/{enhanced} URL must contain the record id")
 
-    for field in ("title", "summary"):
-        value = record.get(field)
-        if not isinstance(value, str) or not value.strip():
-            add(f"invalid_{field}", f"{field} must be a non-empty string")
+    title = record.get("title")
+    if not isinstance(title, str) or not title.strip():
+        add("invalid_title", "title must be a non-empty string")
+
+    abstract = _first(record, "summary", "abstract")
+    if not isinstance(abstract, str) or not abstract.strip():
+        add("invalid_abstract", "summary or abstract must be a non-empty string")
 
     for field in ("authors", "categories"):
         value = record.get(field)
