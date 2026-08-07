@@ -70,6 +70,7 @@ def validate_record(record: Any, *, path: str, line: int) -> list[dict[str, Any]
 
 def validate_files(paths: list[Path]) -> dict[str, Any]:
     errors: list[dict[str, Any]] = []
+    warnings: list[dict[str, Any]] = []
     files: list[dict[str, Any]] = []
     ids: list[tuple[str, str, int]] = []
     record_count = 0
@@ -103,15 +104,17 @@ def validate_files(paths: list[Path]) -> dict[str, Any]:
     counts = Counter(identifier for identifier, _, _ in ids)
     for identifier, path, line in ids:
         if counts[identifier] > 1:
-            errors.append({"path": path, "line": line, "code": "duplicate_id", "message": f"arXiv id {identifier} appears {counts[identifier]} times in the selected dataset"})
+            warnings.append({"path": path, "line": line, "code": "duplicate_id", "message": f"arXiv id {identifier} appears {counts[identifier]} times in the selected archive; distribution layer deduplicates by id"})
 
     return {
-        "schema_version": "kafka.arxiv-data-audit.v1",
+        "schema_version": "kafka.arxiv-data-audit.v2",
         "files": files,
         "file_count": len(files),
         "record_count": record_count,
         "error_count": len(errors),
+        "warning_count": len(warnings),
         "errors": errors,
+        "warnings": warnings,
     }
 
 
