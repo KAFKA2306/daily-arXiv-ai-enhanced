@@ -5,14 +5,20 @@ on:
     paths:
       - "data/**/*.jsonl"
       - "scripts/validate_arxiv_jsonl.py"
+      - "scripts/build_arxiv_catalog.py"
       - "tests/test_validate_arxiv_jsonl.py"
+      - "tests/test_build_arxiv_catalog.py"
+      - "docs/data-api.md"
       - ".github/workflows/arxiv-data-quality.yml"
   push:
     branches: [main]
     paths:
       - "data/**/*.jsonl"
       - "scripts/validate_arxiv_jsonl.py"
+      - "scripts/build_arxiv_catalog.py"
       - "tests/test_validate_arxiv_jsonl.py"
+      - "tests/test_build_arxiv_catalog.py"
+      - "docs/data-api.md"
       - ".github/workflows/arxiv-data-quality.yml"
   workflow_dispatch:
 
@@ -34,8 +40,8 @@ jobs:
           python-version: "3.12"
       - name: Compile and test
         run: |
-          python -m py_compile scripts/validate_arxiv_jsonl.py tests/test_validate_arxiv_jsonl.py
-          python -m unittest tests.test_validate_arxiv_jsonl -v
+          python -m py_compile scripts/validate_arxiv_jsonl.py scripts/build_arxiv_catalog.py tests/test_validate_arxiv_jsonl.py tests/test_build_arxiv_catalog.py
+          python -m unittest tests.test_validate_arxiv_jsonl tests.test_build_arxiv_catalog -v
       - name: Validate each published dataset independently
         run: |
           mkdir -p build/arxiv-audits
@@ -46,6 +52,31 @@ jobs:
             count=$((count + 1))
           done < <(find data -type f -name '*.jsonl' -print0 | sort -z)
           test "$count" -gt 0
+      - name: Build versioned catalog distributions
+        run: |
+          python scripts/build_arxiv_catalog.py --data-dir data --output-dir build/api/v1 | tee build/catalog-stats.json
+          test -s build/api/v1/manifest.json
+          test -s build/api/v1/papers.json
+          test -s build/api/v1/papers.csv
+          test -s build/api/v1/facets.json
+      - name: Smoke-test manifest checksums and counts
+        run: |
+          python - <<'PY'
+          import csv, hashlib, json
+          from pathlib import Path
+          root = Path('build/api/v1')
+          manifest = json.loads((root / 'manifest.json').read_text(encoding='utf-8'))
+          papers = json.loads((root / 'papers.json').read_text(encoding='utf-8'))['papers']
+          assert len(papers) == manifest['stats']['unique_papers']
+          assert len({p['id'] for p in papers}) == len(papers)
+          with (root / 'papers.csv').open(encoding='utf-8', newline='') as f:
+              assert sum(1 for _ in csv.DictReader(f)) == len(papers)
+          for name, meta in manifest['files'].items():
+              raw = (root / name).read_bytes()
+              assert len(raw) == meta['bytes']
+              assert hashlib.sha256(raw).hexdigest() == meta['sha256']
+          print(json.dumps(manifest['stats'], ensure_ascii=False, sort_keys=True))
+          PY
       - name: Upload audit reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -54,3 +85,10 @@ jobs:
           path: build/arxiv-audits
           if-no-files-found: warn
           retention-days: 14
+      - name: Upload catalog API distribution
+        uses: actions/upload-artifact@v4
+        with:
+          name: arxiv-catalog-api-v1
+          path: build/api/v1
+          if-no-files-found: error
+          retention-days: 30
