@@ -29,7 +29,7 @@ class ValidateArxivJsonlTests(unittest.TestCase):
         codes = {error["code"] for error in validate_record(record, path="fixture.jsonl", line=1)}
         self.assertIn("pdf_id_mismatch", codes)
 
-    def test_duplicate_ids_across_files_are_rejected(self) -> None:
+    def test_duplicate_ids_are_audited_as_warnings(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             first = root / "a.jsonl"
@@ -39,7 +39,8 @@ class ValidateArxivJsonlTests(unittest.TestCase):
             second.write_text(payload, encoding="utf-8")
             result = validate_files([first, second])
         self.assertEqual(result["record_count"], 2)
-        self.assertEqual(sum(error["code"] == "duplicate_id" for error in result["errors"]), 2)
+        self.assertEqual(result["error_count"], 0)
+        self.assertEqual(sum(warning["code"] == "duplicate_id" for warning in result["warnings"]), 2)
         self.assertEqual(len(result["files"][0]["sha256"]), 64)
 
 
