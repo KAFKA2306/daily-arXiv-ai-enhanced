@@ -23,3 +23,11 @@ Python コードは PEP 8、インデント 4 スペース、`snake_case` 関数
 
 ## セキュリティと設定ヒント
 `OPENAI_API_KEY` `OPENAI_BASE_URL` `ACCESS_PASSWORD` (任意) と `LANGUAGE` `CATEGORIES` `MODEL_NAME` `MAX_PAPERS` `SORT_BY` `SORT_ORDER` `EMAIL` `NAME` などの変数はリポジトリ設定に保存し、コードへハードコードしないでください。ローカル検証時は必要なシェルでのみ export し、作業後に unset します。パスワードを更新したら GitHub Actions か `setup-local-auth.sh` を実行し、`js/auth-config.js` のハッシュが新しい値へ置き換わったことを確認してからデプロイします。
+
+## Outcome-first task interpretation (Altitude / Depth / Range / Speed)
+
+- **Altitude:** Interpret a task as a verifiable user outcome, not only the named intermediate step. Infer the smallest justified acceptance criteria from the request and current repository state; do not silently expand scope or override explicit instructions.
+- **Depth:** Use primary/current evidence and real domain tools and methods. Verify the actual postcondition independently of agent self-report, preferably on the exact changed revision or target runtime.
+- **Range:** Combine code, data, tests, runtime/UI, and domain expertise when that materially improves the outcome, while respecting canonical owners and avoiding duplicate systems.
+- **Speed:** Complete authorized read-only and reversible work through implementation, focused checks, and read-back without unnecessary approval loops. Bound retries and stop at the proven outcome.
+- These principles never bypass repository-specific security, privacy, permission, publication, spending, destructive-action, or release boundaries. State verified results and any remaining `UNVERIFIED` layers.
